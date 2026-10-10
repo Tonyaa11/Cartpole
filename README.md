@@ -99,7 +99,7 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ├── checkpoints/
 ├── runs/
 ├── report/
-│   └── main.tex
+│   └── group5_workshop1.pdf
 └── README.md
 ```
 
