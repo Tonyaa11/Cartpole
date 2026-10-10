@@ -69,7 +69,7 @@ Install dependencies (see section above).
 Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no installation is needed:
 
 ```python
-!git clone https://github.com/<user>/cartpole-ml.git
+!git clone https://github.com/Tonyaa11/Cartpole.git cartpole-ml
 %cd cartpole-ml
 !python dataset_info.py
 !python src/baselines.py
@@ -99,8 +99,7 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ├── runs/
 ├── report/
 │   └── main.tex
-└── group5_workshop1.pdf
-│
+├── group5_workshop1.pdf
 └── README.md
 ```
 
@@ -221,12 +220,12 @@ To reproduce results:
 3. Run `python src/baselines.py` (and the two ablations)
 4. Compare with `runs/baseline_results_*.csv`
 
-Main result on the test set (60 episodes, threshold chosen on validation):
+Main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
 
 | Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|
 | Logistic Regression | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
-| Random Forest | 0.833 | 0.841 | 0.837 | 0.994 | 0.923 |
+| Random Forest | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
 | Gradient Boosting | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
 
 ---
