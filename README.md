@@ -1,86 +1,235 @@
-# CartPole Failure Prediction - Machine Learning, Workshop 1
+# Failure Prediction on CartPole Trajectories: Data Preparation and Supervised Baselines
 
-**Course:** Machine Learning, Semester 2026-III - Universidad Distrital Francisco José de Caldas
-**Workshop 1:** Data Preparation & Supervised Learning Baselines
-**Group:** `<N>` - **Authors:** `<names>`
+## 1. Overview
 
-## 1. Problem
+This folder contains the Workshop 1 project of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). It implements a binary classification task on CartPole trajectories: given the state `(x, x_dot, theta, theta_dot)` and the `action` at time `t`, predict whether the episode is about to fail (`label = 1` in the last 5 steps of every failed episode). The project includes dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
 
-Binary classification on CartPole trajectories. Given the state of the system
-`(x, x_dot, theta, theta_dot)` and the `action` taken at time `t`, predict whether
-the episode is about to fail: `label = 1` in the **last 5 steps** of every episode
-that ends in failure, `label = 0` otherwise.
+**Group:** `<5>` | **Authors:** `<Miguel Angel Torres Ramirez, Cristian David Romero Gil, Omar Esteban Peña Sanchez>`
 
-## 2. Dataset
-
-| Property | Value |
+| Dataset property | Value |
 |---|---|
-| File | `data/raw/cartpole_dataset.csv` |
-| Size | ~2 MB (1.99 MB) |
+| File | `data/raw/cartpole_dataset.csv` (1.99 MB) |
 | Rows / episodes | 35,874 / 400 |
 | Columns | `episode, t, x, x_dot, theta, theta_dot, action, label` |
-| Class balance | 94.51 % class 0 / 5.49 % class 1 (imbalance 17.2 : 1) |
+| Class balance | 94.51 % class 0 / 5.49 % class 1 (17.2 : 1) |
 | SHA256 | `ec067d5dcc498f2b5c5486d24f290283431ef3a0db0a4952cfde84f07e4f53f8` |
 
-**Provenance / license:** `<TODO: describe how the dataset was generated (environment, policy, seed, script) or its source and license>`.
+Dataset provenance and license: `<TODO: describe how the dataset was generated (environment, policy, seed, script) or its source and license>`.
 
-### Download / setup from scratch
+---
+
+## 2. Requirements
+
+### System
+
+* Linux (Ubuntu 20.04+ recommended), macOS, Windows or Google Colab
+* Python 3.10+ (developed and tested with Python 3.12)
+
+### Dependencies
+
+Install the required packages:
 
 ```bash
-git clone <repo-url> && cd cartpole-ml
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install numpy
+pip install pandas
+pip install scikit-learn
+pip install matplotlib
+pip install seaborn
+pip install jupyter
+```
+
+---
+
+Or use the requirements.txt
+
+```bash
 pip install -r requirements.txt
-# Place cartpole_dataset.csv in data/raw/ (already included in this repo)
-python dataset_info.py                                  # verifies the SHA256 and prints a summary
 ```
 
-## 3. Repository structure
+---
 
-```
-cartpole-ml/
-|-- dataset_info.py        # dataset scan: integrity, counts, ranges
-|-- requirements.txt
-|-- data/
-|   |-- raw/               # cartpole_dataset.csv
-|   |-- processed/
-|   `-- splits.json        # episode ids of train / val / test (never re-split!)
-|-- src/
-|   |-- dataset.py         # loading, episode split, scaling, augmentation
-|   |-- features.py        # feature engineering (past-only)
-|   `-- baselines.py       # Logistic Regression, Random Forest, Gradient Boosting
-|-- notebooks/eda.ipynb    # exploratory data analysis
-|-- checkpoints/           # model weights (future workshops)
-|-- runs/                  # results of the baselines (csv / json)
-`-- report/main.tex        # IEEE-style report (Overleaf)
-```
+## 3. Environment Setup (Linux)
 
-## 4. Reproduce all results
+Create and activate a virtual environment:
 
 ```bash
-python src/dataset.py            # creates data/splits.json (seed 42)
-python src/baselines.py          # main results        -> runs/baseline_results_base.csv
-python src/baselines.py --raw-only   # ablation: raw features only
-python src/baselines.py --augment    # ablation: noise augmentation (train only)
-jupyter notebook notebooks/eda.ipynb # EDA
+python3 -m venv cartpole_env
+source cartpole_env/bin/activate
 ```
 
-All scripts fix the seed (42) for `random` and `numpy`, and models receive the same seed.
+Upgrade pip:
 
-## 5. Methodology summary
+```bash
+pip install --upgrade pip
+```
 
-* **Split:** 70 / 15 / 15 **by episode** (279 / 61 / 60), stratified by episode-length quartile.
-  Splitting by row would leak near-identical consecutive states between partitions.
-* **Features (16):** raw state + action, distance to the failure limits
-  (|theta| < 0.2095 rad, |x| < 2.4 m), first differences, 3-step rolling means and
-  time-to-limit estimates. Only current/past information is used; `t` is excluded.
-* **Scaling:** z-score fitted on the training set only.
-* **Augmentation (optional, train only):** Gaussian sensor noise (2 % of each std).
-* **Imbalance:** class weights (Logistic Regression, Random Forest) / sample weights (Gradient Boosting).
-* **Threshold:** chosen on validation (max F1); test is never used for tuning.
-* **Metrics:** precision, recall, F1, ROC-AUC, PR-AUC, accuracy and confusion matrix.
-  The most important ones are **recall** (a missed failure is the costly error) and **PR-AUC**
-  (robust to the 17:1 imbalance); accuracy alone is misleading.
+Install dependencies (see section above).
 
-## 6. Results (test set, threshold chosen on validation)
+### Google Colab (optional)
 
-See `runs/baseline_results_*.csv` and the report in `report/main.tex`.
+Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no installation is needed:
+
+```python
+!git clone https://github.com/<user>/cartpole-ml.git
+%cd cartpole-ml
+!python dataset_info.py
+!python src/baselines.py
+```
+
+---
+
+## 4. Project Structure
+
+```text
+.
+├── dataset_info.py
+├── requirements.txt
+├── data/
+│   ├── raw/
+│   │   └── cartpole_dataset.csv
+│   ├── processed/
+│   └── splits.json
+├── src/
+│   ├── dataset.py
+│   ├── features.py
+│   └── baselines.py
+├── notebooks/
+│   └── eda.ipynb
+├── checkpoints/
+├── runs/
+├── report/
+│   └── main.tex
+└── README.md
+```
+
+---
+
+## 5. Running Experiments
+
+Run every command from the repository root.
+
+### 5.1 Verifying the Dataset
+
+```bash
+python dataset_info.py
+```
+
+This will:
+
+* Verify the SHA256 checksum (it must print `OK (matches expected)`)
+* Print the shape, column types, missing values and duplicates
+* Print class counts, imbalance ratio, feature ranges and episode statistics
+
+---
+
+### 5.2 Creating the Train / Validation / Test Split
+
+```bash
+python src/dataset.py
+```
+
+This will:
+
+* Split the 400 **episodes** (not rows) into 70 / 15 / 15 %, stratified by episode length
+* Save the partition in `data/splits.json` (279 / 61 / 60 episodes, seed 42)
+
+The file is already included. Never re-split randomly: every script loads this file.
+
+---
+
+### 5.3 Training and Evaluating the Baselines
+
+```bash
+python src/baselines.py
+```
+
+This will:
+
+* Build the 16 engineered features and standardise them (statistics from the training set only)
+* Train Logistic Regression, Random Forest and Gradient Boosting
+* Select the decision threshold on the validation set (maximum F1)
+* Print precision, recall, F1, ROC-AUC, PR-AUC, accuracy and the confusion matrix on the test set
+* Store the results in `runs/baseline_results_base.csv` and `.json`
+
+---
+
+### 5.4 Ablation Experiments
+
+```bash
+python src/baselines.py --raw-only   # only the 5 raw columns (no feature engineering)
+python src/baselines.py --augment    # Gaussian-noise augmentation, training set only
+```
+
+Results are stored in `runs/baseline_results_raw.*` and `runs/baseline_results_augmented.*`.
+
+---
+
+### 5.5 Exploratory Data Analysis
+
+```bash
+jupyter notebook notebooks/eda.ipynb
+```
+
+Run the cells in order. The notebook covers integrity, target distribution, episode structure, feature statistics, outliers, class-conditional distributions, correlations, engineered features and the split.
+
+---
+
+## 6. Results Visualization
+
+There is no TensorBoard in this workshop. Results are read from:
+
+```text
+runs/
+  ├── baseline_results_base.csv        # main results (engineered features)
+  ├── baseline_results_raw.csv         # ablation: raw features
+  └── baseline_results_augmented.csv   # ablation: noise augmentation
+```
+
+Each file has one row per model and evaluation setting (`test @ 0.5` and `test @ val-threshold`) with accuracy, precision, recall, F1, ROC-AUC, PR-AUC and the confusion-matrix counts (`tn, fp, fn, tp`). Figures are produced in `notebooks/eda.ipynb`.
+
+---
+
+## 7. Reproducibility
+
+All experiments are reproducible due to:
+
+* Fixed random seed: 42 (`random`, `numpy` and every scikit-learn model)
+* A saved episode-level split in `data/splits.json`, which stores the SHA256 of the dataset it was created from
+* Normalisation statistics and augmentation computed on the training set only (no leakage)
+* No information from the future in the features, and the time index `t` is not used
+
+To reproduce results:
+
+1. Set up the environment
+2. Run `python dataset_info.py` and check the checksum
+3. Run `python src/baselines.py` (and the two ablations)
+4. Compare with `runs/baseline_results_*.csv`
+
+Main result on the test set (60 episodes, threshold chosen on validation):
+
+| Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|---|---|---|---|---|---|
+| Logistic Regression | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
+| Random Forest | 0.833 | 0.841 | 0.837 | 0.994 | 0.923 |
+| Gradient Boosting | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
+
+---
+
+## 8. Logging Artifacts
+
+Result files are included in the `runs/` directory. They contain:
+
+* Test metrics of the three baselines in three settings (engineered, raw, augmented)
+* Confusion-matrix counts
+* Decision threshold selected on validation and fit time
+
+They can be inspected directly without retraining. The `checkpoints/` directory is reserved for the model weights of future workshops.
+
+---
+
+## 9. Notes
+
+* Training is CPU-based. The baselines take about 30 seconds; the augmented run takes around one minute (Random Forest dominates).
+* Accuracy is not a decision metric here: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
+* The `report/` folder contains the IEEE-style LaTeX report (`main.tex`, to be compiled in Overleaf).
+* Small differences between models are not conclusive: results come from one split and one seed.
