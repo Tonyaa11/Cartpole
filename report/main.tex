@@ -33,12 +33,13 @@ Email: migatorresr@udistrital.edu.co}
 \IEEEauthorblockN{Cristian David Romero Gil}
 \IEEEauthorblockA{Dept. of Computer Engineering\\
 Universidad Distrital Francisco Jos\'e de Caldas\\
-Email: cdromerog@udistrital.edu.co}}
+Email: cdromerog@udistrital.edu.co}
 \and
 \IEEEauthorblockN{Omar Esteban Peña Sanchez}
 \IEEEauthorblockA{Dept. of Computer Engineering\\
 Universidad Distrital Francisco Jos\'e de Caldas\\
-Email: oepenas@udistrital.edu.co}
+Email: oepenas@udistrital.edu.co}}
+
 \maketitle
 
 \begin{abstract}
@@ -242,7 +243,7 @@ at the validation threshold. Fig.~\ref{fig:cm} shows the confusion matrices.
 \hline
 \textbf{Model} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{ROC-AUC} & \textbf{PR-AUC} \\ \hline
 Logistic Regression & 0.669 & 0.703 & 0.686 & 0.981 & 0.791 \\ \hline
-Random Forest & 0.833 & 0.841 & 0.837 & 0.994 & 0.923 \\ \hline
+Random Forest & 0.812 & 0.852 & 0.832 & 0.994 & 0.923 \\ \hline
 \textbf{Gradient Boosting} & 0.834 & \textbf{0.886} & \textbf{0.860} & \textbf{0.996} & \textbf{0.935} \\ \hline
 \end{tabular}
 \end{table}
@@ -255,7 +256,7 @@ Random Forest & 0.833 & 0.841 & 0.837 & 0.994 & 0.923 \\ \hline
 \end{figure*}
 
 Gradient Boosting detects 257 of the 290 positive samples with 51 false alarms
-(TN = 4,989, FP = 51, FN = 33, TP = 257), followed by Random Forest (244 detected, 49 false
+(TN = 4,989, FP = 51, FN = 33, TP = 257), followed by Random Forest (247 detected, 57 false
 alarms) and Logistic Regression (204 detected, 101 false alarms). The accuracy of all models
 (0.965 to 0.984) is above the 0.945 of the trivial classifier but hides the differences in the
 minority class, which confirms that accuracy is not informative here.
@@ -276,7 +277,7 @@ Table~\ref{tab:ablation} changes one factor at a time with respect to the main s
 \hline
 \textbf{Model} & \textbf{Raw feat.} & \textbf{Engineered} & \textbf{Eng. + aug.} \\ \hline
 Logistic Regression & 0.230 / 0.098 & 0.686 / 0.791 & 0.685 / 0.792 \\ \hline
-Random Forest & 0.839 / 0.944 & 0.837 / 0.923 & 0.826 / 0.933 \\ \hline
+Random Forest & 0.839 / 0.944 & 0.832 / 0.923 & 0.826 / 0.933 \\ \hline
 Gradient Boosting & 0.873 / 0.952 & 0.860 / 0.935 & 0.848 / 0.942 \\ \hline
 \end{tabular}
 \end{table}
@@ -294,7 +295,7 @@ useful variety.
 
 \subsection{Problem Difficulty}
 Tree ensembles reach a ROC-AUC close to 0.995, so the classes are almost separable in a
-ranking sense, yet the F1 stays around 0.84--0.87: the remaining errors concentrate on the
+ranking sense, yet the F1 stays around 0.83--0.87: the remaining errors concentrate on the
 precision/recall trade-off of the rare class. A plausible reason is that states a few steps
 before the label window are almost identical to states inside it (the label boundary is
 arbitrary with respect to the dynamics), but we did not verify this and leave it as a
@@ -320,8 +321,10 @@ includes grouped cross-validation, a multi-seed evaluation, and sequence models 
 exploit the temporal structure of the episodes.
 
 \section*{Reproducibility}
-Code, split file and instructions are available at https://github.com/Tonyaa11/Cartpole.git. All
-reported values are produced by \texttt{src/baselines.py} (seed 42).
+Code, split file and instructions are available at \url{https://github.com/Tonyaa11/Cartpole}. All
+reported values are produced by \texttt{src/baselines.py} (seed 42) in Google Colab
+(scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions can change the
+Random Forest results slightly.
 
 \begin{thebibliography}{00}
 \bibitem{barto1983} A. G. Barto, R. S. Sutton, and C. W. Anderson, ``Neuronlike adaptive elements that can solve difficult learning control problems,'' \emph{IEEE Trans. Syst., Man, Cybern.}, vol. SMC-13, no. 5, pp. 834--846, 1983.
