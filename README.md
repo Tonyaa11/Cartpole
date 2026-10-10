@@ -4,7 +4,7 @@
 
 This folder contains the Workshop 1 project of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). It implements a binary classification task on CartPole trajectories: given the state `(x, x_dot, theta, theta_dot)` and the `action` at time `t`, predict whether the episode is about to fail (`label = 1` in the last 5 steps of every failed episode). The project includes dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
 
-**Group:** 5 | **Authors:** `<names>`
+**Group:** 5 | **Authors:** `Miguel Angel Torres Ramirez, Cristian David Romero Gil, Omar Esteban Peña Sanchez`
 
 | Dataset property | Value |
 |---|---|
@@ -246,5 +246,4 @@ They can be inspected directly without retraining. The `checkpoints/` directory 
 
 * Training is CPU-based. The baselines take about 30 seconds; the augmented run takes around one minute (Random Forest dominates).
 * Accuracy is not a decision metric here: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
-* The `report/` folder contains the IEEE-style LaTeX report (`main.tex`, to be compiled in Overleaf).
 * Small differences between models are not conclusive: results come from one split and one seed.
