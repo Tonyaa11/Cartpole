@@ -1,8 +1,12 @@
-# Failure Prediction on CartPole Trajectories: Data Preparation and Supervised Baselines
+# Failure Prediction on CartPole Trajectories: Data Preparation, Supervised Baselines and Deep Sequence Model
 
 ## 1. Overview
 
-This folder contains the Workshop 1 project of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). It implements a binary classification task on CartPole trajectories: given the state `(x, x_dot, theta, theta_dot)` and the `action` at time `t`, predict whether the episode is about to fail (`label = 1` in the last 5 steps of every failed episode). The project includes dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
+This folder contains Workshops 1 and 2 of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). It implements a binary classification task on CartPole trajectories: given the state `(x, x_dot, theta, theta_dot)` and the `action` at time `t`, predict whether the episode is about to fail (`label = 1` in the last 5 steps of every failed episode).
+
+**Workshop 1** covers dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
+
+**Workshop 2** adds a deep learning model: an LSTM that reads a window of the last 16 steps of each episode, trained with position-weighted BCE loss, AdamW, cosine learning-rate schedule, dropout, weight decay, gradient clipping and early stopping. Training is logged to TensorBoard and CSV, the best checkpoint is saved to `checkpoints/model_best.pt`, and the test results are compared against the Workshop 1 baselines.
 
 **Group:** 5 | **Authors:** `Miguel Angel Torres Ramirez, Cristian David Romero Gil, Omar Esteban Peña Sanchez`
 
@@ -36,6 +40,8 @@ pip install scikit-learn
 pip install matplotlib
 pip install seaborn
 pip install jupyter
+pip install torch            # Workshop 2 (deep model)
+pip install tensorboard      # Workshop 2 (training logs)
 ```
 
 ---
@@ -90,16 +96,31 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── processed/
 │   └── splits.json
 ├── src/
-│   ├── dataset.py
-│   ├── features.py
-│   ├── baselines.py
-│   └── make_figures.py
+│   ├── dataset.py           # W1: loading, split, scaling, augmentation
+│   ├── features.py          # W1: 16 engineered features
+│   ├── baselines.py         # W1: the three supervised baselines
+│   ├── make_figures.py      # W1: report figures
+│   ├── model.py             # W2: LSTM/GRU architecture
+│   ├── sequences.py         # W2: past-only sliding windows
+│   ├── train.py             # W2: training loop + TensorBoard/CSV logs
+│   ├── evaluate.py          # W2: test evaluation + W1 comparison table
+│   ├── test_model.py        # W2: load checkpoint and run inference
+│   └── make_figures_w2.py   # W2: report figures
 ├── notebooks/
 │   └── eda.ipynb
 ├── checkpoints/
+│   └── model_best.pt        # W2: best model (highest validation F1)
 ├── runs/
+│   ├── baseline_results_*.csv       # W1 results
+│   ├── train_log_*.csv              # W2 per-epoch logs
+│   ├── train_summary_*.json         # W2 run summary
+│   ├── eval_*.json                  # W2 test metrics
+│   ├── comparison_*.csv             # W2 vs W1 table
+│   └── tb/                          # W2 TensorBoard event files
 ├── report/
-│   └── main.tex
+│   ├── main.tex             # W1 report
+│   ├── main_w2.tex          # W2 report
+│   └── figures/
 ├── group5_workshop1.pdf
 └── README.md
 ```
@@ -190,9 +211,88 @@ Run the cells in order. The notebook covers integrity, target distribution, epis
 
 ---
 
-## 6. Results Visualization
+## 6. Workshop 2: Deep Sequence Model (LSTM)
 
-There is no TensorBoard in this workshop. Results are read from:
+All commands below run from the repository root and reuse the **same episode split** (`data/splits.json`) and the same test rows as Workshop 1, so the metrics are directly comparable.
+
+### 6.1 Model Architecture Check
+
+```bash
+python src/model.py                 # forward-pass smoke test (LSTM + GRU)
+python src/model.py --cell gru --bidirectional --input-size 16
+```
+
+Prints the output shape and the parameter count of the architecture (default: 2-layer LSTM, 64 hidden units, MLP head → 53,569 parameters).
+
+---
+
+### 6.2 Training
+
+```bash
+python src/train.py                                  # default: LSTM, window 16, raw features
+python src/train.py --cell gru --window 16           # GRU variant
+python src/train.py --window 32                      # longer history
+python src/train.py --hidden 128                     # wider model
+python src/train.py --features engineered            # 16 engineered features per step
+python src/train.py --augment                        # noise augmentation (train only)
+```
+
+This will:
+
+* Build past-only sliding windows of the last `--window` steps (one sample per raw row; short episodes keep shorter windows, the packed RNN masks the padding)
+* Standardise the features with statistics computed **on the training partition only**
+* Train with position-weighted BCE loss (17.2:1 imbalance), AdamW, cosine LR schedule, dropout, weight decay, gradient clipping and early stopping on validation F1
+* Log every epoch to TensorBoard (`runs/tb/<run>`) **and** to `runs/train_log_<run>.csv`
+* Select the decision threshold on the validation set (maximum F1) and save the **best** model to `checkpoints/model_best.pt` (weights + scaler + threshold + config)
+* Print the test metrics and store them in `runs/train_summary_<run>.json`
+
+To watch the live curves:
+
+```bash
+tensorboard --logdir runs/tb
+```
+
+---
+
+### 6.3 Test-Set Evaluation and Comparison with Workshop 1
+
+```bash
+python src/evaluate.py
+```
+
+This will:
+
+* Reload `checkpoints/model_best.pt` (no retraining) and rebuild the same test windows
+* Report accuracy, precision, recall, F1, ROC-AUC, PR-AUC and the confusion matrix at threshold 0.5 and at the validation threshold
+* Print a comparison table: the three Workshop 1 baselines vs. the Workshop 2 deep model
+* Save `runs/eval_<run>.json` and `runs/comparison_<run>.csv`
+
+---
+
+### 6.4 Verifying the Saved Checkpoint
+
+```bash
+python src/test_model.py --n 10 --split test   # 10 example predictions on unseen data
+python src/test_model.py --interactive         # type your own state and get a prediction
+```
+
+Loads `checkpoints/model_best.pt` and runs inference with the scaler stored inside the checkpoint, proving the artifact is self-contained.
+
+---
+
+### 6.5 Report Figures (Workshop 2)
+
+```bash
+python src/make_figures_w2.py
+```
+
+Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schematic), `fig2-curves.png` (learning curves), `fig2-confusion.png`, `fig2-roc-pr.png` (deep model vs. baselines) and `fig2-comparison.png`. They are picked up automatically by `report/main_w2.tex` on Overleaf.
+
+---
+
+## 7. Results Visualization
+
+There is no TensorBoard in Workshop 1 (it is used in Workshop 2, section 6). Workshop 1 results are read from:
 
 ```text
 runs/
@@ -205,23 +305,23 @@ Figures are saved by `src/make_figures.py` in `report/figures/`. Each CSV file h
 
 ---
 
-## 7. Reproducibility
+## 8. Reproducibility
 
 All experiments are reproducible due to:
 
-* Fixed random seed: 42 (`random`, `numpy` and every scikit-learn model)
+* Fixed random seed: 42 (`random`, `numpy`, `torch` and every scikit-learn model)
 * A saved episode-level split in `data/splits.json`, which stores the SHA256 of the dataset it was created from
 * Normalisation statistics and augmentation computed on the training set only (no leakage)
-* No information from the future in the features, and the time index `t` is not used
+* No information from the future in the features or the windows, and the time index `t` is not used
 
-To reproduce results:
+To reproduce the Workshop 1 results:
 
 1. Set up the environment
 2. Run `python dataset_info.py` and check the checksum
 3. Run `python src/baselines.py` (and the two ablations)
 4. Compare with `runs/baseline_results_*.csv`
 
-Main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
+Workshop 1 main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
 
 | Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|
@@ -229,22 +329,39 @@ Main result on the test set (60 episodes, threshold chosen on validation). Refer
 | Random Forest | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
 | Gradient Boosting | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
 
+To reproduce the Workshop 2 results:
+
+1. `python src/train.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
+2. `python src/evaluate.py` (test metrics + comparison table)
+3. `python src/make_figures_w2.py` (report figures)
+4. Compare with `runs/eval_*.json` and `runs/comparison_*.csv`
+
+**Workshop 1 baselines vs. Workshop 2 deep model** (test set, threshold chosen on validation, seed 42):
+
+| Model | Workshop | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+|---|---|---|---|---|---|---|
+| Logistic Regression | W1 | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
+| Random Forest | W1 | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
+| Gradient Boosting | W1 | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
+| **Deep LSTM (window 16)** | **W2** | **0.812** | **0.924** | **0.865** | **0.997** | **0.956** |
+
 ---
 
-## 8. Logging Artifacts
+## 9. Logging Artifacts
 
 Result files are included in the `runs/` directory. They contain:
 
 * Test metrics of the three baselines in three settings (engineered, raw, augmented)
 * Confusion-matrix counts
 * Decision threshold selected on validation and fit time
+* **Workshop 2:** per-epoch training/validation logs (`train_log_*.csv`), run summaries (`train_summary_*.json`), test evaluation (`eval_*.json`), the W1-vs-W2 comparison table (`comparison_*.csv`) and TensorBoard event files (`tb/`)
 
-They can be inspected directly without retraining. The `checkpoints/` directory is reserved for the model weights of future workshops.
+They can be inspected directly without retraining. `checkpoints/model_best.pt` contains the best Workshop 2 model (weights + scaler + threshold + config) and is reloaded by `src/evaluate.py` and `src/test_model.py`.
 
 ---
 
-## 9. Notes
+## 10. Notes
 
-* Training is CPU-based. The baselines take about 30 seconds; the augmented run takes around one minute (Random Forest dominates).
+* Training is CPU-based. The Workshop 1 baselines take about 30 seconds; the augmented run takes around one minute (Random Forest dominates). The Workshop 2 LSTM takes about 7 seconds per epoch on CPU (~3 minutes for 40 epochs with early stopping).
 * Accuracy is not a decision metric here: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
 * Small differences between models are not conclusive: results come from one split and one seed.
