@@ -1,12 +1,14 @@
-# Failure Prediction on CartPole Trajectories: Data Preparation, Supervised Baselines and Deep Sequence Model
+# CartPole Machine Learning Project: Workshops 1–3
 
 ## 1. Overview
 
-This folder contains Workshops 1 and 2 of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). It implements a binary classification task on CartPole trajectories: given the state `(x, x_dot, theta, theta_dot)` and the `action` at time `t`, predict whether the episode is about to fail (`label = 1` in the last 5 steps of every failed episode).
+This repository contains Workshops 1, 2, and 3 of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). The project centres on the CartPole-v1 environment and progresses from failure *prediction* (W1 & W2) to failure *avoidance* (W3).
 
 **Workshop 1** covers dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
 
 **Workshop 2** adds a deep learning model: an LSTM that reads a window of the last 16 steps of each episode, trained with position-weighted BCE loss, AdamW, cosine learning-rate schedule, dropout, weight decay, gradient clipping and early stopping. Training is logged to TensorBoard and CSV, the best checkpoint is saved to `checkpoints/model_best.pt`, and the test results are compared against the Workshop 1 baselines.
+
+**Workshop 3** formulates CartPole control as an MDP and trains a Deep Q-Network (DQN) from scratch in PyTorch. A hyperparameter sweep over 6 configurations × 3 seeds is run; the best agent is evaluated against five baseline policies (including the Workshop 1 classifier used as a controller) on 100 held-out initial states, in both nominal and noisy conditions.
 
 **Group:** 5 | **Authors:** `Miguel Angel Torres Ramirez, Cristian David Romero Gil, Omar Esteban Peña Sanchez`
 
@@ -109,17 +111,36 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ├── notebooks/
 │   └── eda.ipynb
 ├── checkpoints/
-│   └── model_best.pt        # W2: best model (highest validation F1)
+│   ├── model_best.pt        # W2: best model (highest validation F1)
+│   ├── agent_best.pt        # W3: best DQN agent (highest validation return)
+│   └── workshop3_sweep/     # W3: best checkpoint per config × seed
 ├── runs/
 │   ├── baseline_results_*.csv       # W1 results
 │   ├── train_log_*.csv              # W2 per-epoch logs
 │   ├── train_summary_*.json         # W2 run summary
 │   ├── eval_*.json                  # W2 test metrics
 │   ├── comparison_*.csv             # W2 vs W1 table
-│   └── tb/                          # W2 TensorBoard event files
+│   ├── tb/                          # W2 TensorBoard event files
+│   └── workshop3/                   # W3 TensorBoard logs, sweep & test results
+├── workshop3/
+│   ├── configs/sweep.json           # W3: 6 hyperparameter configurations
+│   ├── src/
+│   │   ├── env.py                   # W3: custom Gymnasium environment
+│   │   ├── agent.py                 # W3: DQN agent
+│   │   ├── baselines.py             # W3: 5 baseline policies
+│   │   ├── train.py                 # W3: training loop + sweep
+│   │   ├── evaluate.py              # W3: test evaluation
+│   │   ├── w1_bridge.py             # W3: W1 classifier as controller
+│   │   └── common.py                # W3: shared paths and seeds
+│   ├── notebooks/workshop3_colab.ipynb
+│   ├── report/
+│   │   ├── main.tex                 # W3 report (Overleaf source)
+│   │   ├── figures/                 # generated figures
+│   │   └── generated/               # generated LaTeX tables and macros
+│   └── requirements.txt
 ├── report/
-│   ├── main.tex             # W1 report
-│   ├── main_w2.tex          # W2 report
+│   ├── main.tex             # W1 report (Overleaf source)
+│   ├── main_w2.tex          # W2 report (Overleaf source)
 │   └── figures/
 ├── group5_workshop1.pdf
 └── README.md
@@ -290,9 +311,32 @@ Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schema
 
 ---
 
-## 7. Results Visualization
+## 7. Workshop 3: Reinforcement Learning Quickstart
 
-There is no TensorBoard in Workshop 1 (it is used in Workshop 2, section 6). Workshop 1 results are read from:
+```bash
+# 1. Validate the custom Gymnasium environment
+python workshop3/src/env.py
+
+# 2. Run the full hyperparameter sweep (6 configs × 3 seeds, ~20–40 min)
+python workshop3/src/train.py --sweep
+
+# 3. Evaluate the best agent and all baselines on 100 test states
+python workshop3/src/evaluate.py
+
+# 4. Generate figures and LaTeX tables for the report
+python workshop3/src/make_report_assets.py
+
+# 5. Watch TensorBoard training curves
+tensorboard --logdir runs/workshop3 --port 6006
+```
+
+Google Colab: open `workshop3/notebooks/workshop3_colab.ipynb` and run all cells.
+
+---
+
+## 8. Results Visualization
+
+There is no TensorBoard in Workshop 1 (it is used in Workshops 2 and 3). Workshop 1 results are read from:
 
 ```text
 runs/
@@ -347,7 +391,67 @@ To reproduce the Workshop 2 results:
 
 ---
 
-## 9. Logging Artifacts
+## 9. Workshop 3: Reinforcement Learning Agent (DQN)
+
+See `workshop3/README.md` for the full run instructions.
+
+### 9.1 MDP Definition
+
+| Component | Definition |
+|---|---|
+| State | `(x, ẋ, θ, θ̇)` — 4 continuous values |
+| Actions | `0` = push left (−10 N), `1` = push right (+10 N) |
+| Transition | Cart-pole equations of motion, Euler step 0.02 s (identical to CartPole-v1) |
+| Reward | +1 per step survived + optional potential-based shaping |
+| Termination | `|θ| > 12°` or `|x| > 2.4 m`; truncation at 500 steps |
+
+### 9.2 Hyperparameter Sweep Results (validation, best seed per config)
+
+| Configuration | Best val return | Episodes to 195 | Parameters |
+|---|---|---|---|
+| **reference** (selected) | **500.0** | **3730** | **17 410** |
+| eps_decay 0.995 | 500.0 | 4 420 | 17 410 |
+| lr 1e-4 | 497.1 | 5 450 | 17 410 |
+| gamma 0.95 | 500.0 | 3 530 | 17 410 |
+| weight_decay 1e-4 | 500.0 | 2 560 | 17 410 |
+| no_shaping | 457.0 | 7 850 | 17 410 |
+
+### 9.3 Test-Set Evaluation (100 held-out initial states)
+
+**Nominal environment:**
+
+| Policy | Mean return | Success rate | Mean \|θ\| (°) |
+|---|---|---|---|
+| Random | 20.7 | 0 % | 4.01 |
+| Alternating (fixed) | 36.0 | 0 % | 3.95 |
+| Angle rule (greedy) | 42.1 | 0 % | 4.74 |
+| PD rule (heuristic) | 500.0 | 100 % | 0.22 |
+| W1 classifier (look-ahead) | 487.3 | 84 % | 3.18 |
+| **DQN agent_best.pt** | **498.1** | **97 %** | 6.07 |
+
+**Noisy environment (actuator noise σ = 2 N):**
+
+| Policy | Mean return | Success rate |
+|---|---|---|
+| Random | 21.0 | 0 % |
+| PD rule (heuristic) | 464.0 | 64 % |
+| W1 classifier (look-ahead) | 466.9 | 68 % |
+| **DQN agent_best.pt** | **370.9** | **49 %** |
+
+### 9.4 Cross-Workshop Performance Summary
+
+| Model | Workshop | Task | Key metric | Value |
+|---|---|---|---|---|
+| Logistic Regression | W1 | Failure prediction | F1 | 0.686 |
+| Random Forest | W1 | Failure prediction | F1 | 0.832 |
+| Gradient Boosting | W1 | Failure prediction | F1 | 0.860 |
+| Deep LSTM (window 16) | W2 | Failure prediction | F1 | 0.865 |
+| DQN (nominal) | W3 | Failure avoidance | Success rate | 97 % |
+| DQN (noisy) | W3 | Failure avoidance | Success rate | 49 % |
+
+---
+
+## 10. Logging Artifacts
 
 Result files are included in the `runs/` directory. They contain:
 
@@ -355,13 +459,15 @@ Result files are included in the `runs/` directory. They contain:
 * Confusion-matrix counts
 * Decision threshold selected on validation and fit time
 * **Workshop 2:** per-epoch training/validation logs (`train_log_*.csv`), run summaries (`train_summary_*.json`), test evaluation (`eval_*.json`), the W1-vs-W2 comparison table (`comparison_*.csv`) and TensorBoard event files (`tb/`)
+* **Workshop 3:** TensorBoard events and CSV logs for 18 training runs (`runs/workshop3/`), `sweep_results.json`, `test_results.json`, `trajectories.json`, `env_validation.json`
 
-They can be inspected directly without retraining. `checkpoints/model_best.pt` contains the best Workshop 2 model (weights + scaler + threshold + config) and is reloaded by `src/evaluate.py` and `src/test_model.py`.
+They can be inspected directly without retraining. `checkpoints/model_best.pt` contains the best Workshop 2 model and `checkpoints/agent_best.pt` contains the best Workshop 3 DQN agent.
 
 ---
 
-## 10. Notes
+## 11. Notes
 
-* Training is CPU-based. The Workshop 1 baselines take about 30 seconds; the augmented run takes around one minute (Random Forest dominates). The Workshop 2 LSTM takes about 7 seconds per epoch on CPU (~3 minutes for 40 epochs with early stopping).
-* Accuracy is not a decision metric here: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
-* Small differences between models are not conclusive: results come from one split and one seed.
+* Training is CPU-based. W1 baselines: ~30 s; W2 LSTM: ~3 min (40 epochs); W3 full sweep: 20–40 min.
+* Accuracy is not a decision metric for W1/W2: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
+* DQN degrades after reaching peak performance; the saved checkpoint is the best validation checkpoint, not the final one.
+* Small differences between models are not conclusive: results come from one split and fixed seeds.

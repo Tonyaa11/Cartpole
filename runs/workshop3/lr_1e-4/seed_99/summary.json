@@ -1,0 +1,38 @@
+{
+  "summary": {
+    "config": "lr_1e-4",
+    "seed": 99,
+    "best_val_return": 497.1,
+    "best_episode": 130,
+    "final_val_smoothed": 198.06,
+    "steps_to_195": 5450,
+    "steps_to_475": null,
+    "total_env_steps": 38342,
+    "train_time_s": 66.0,
+    "n_parameters": 17410,
+    "checkpoint": "checkpoints/workshop3_sweep/lr_1e-4_s99.pt"
+  },
+  "config": {
+    "name": "lr_1e-4",
+    "learning_rate": 0.0001,
+    "gamma": 0.99,
+    "epsilon_start": 1.0,
+    "epsilon_min": 0.01,
+    "epsilon_decay": 0.99,
+    "weight_decay": 0.0,
+    "shaping_scale": 1.0,
+    "hidden_sizes": [
+      128,
+      128
+    ],
+    "buffer_size": 50000,
+    "batch_size": 64,
+    "learning_starts": 1000,
+    "train_freq": 1,
+    "target_update": 500,
+    "double_dqn": false,
+    "grad_clip": 10.0,
+    "episodes": 300,
+    "eval_every": 10
+  }
+}

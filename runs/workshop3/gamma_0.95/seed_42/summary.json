@@ -1,0 +1,38 @@
+{
+  "summary": {
+    "config": "gamma_0.95",
+    "seed": 42,
+    "best_val_return": 500.0,
+    "best_episode": 190,
+    "final_val_smoothed": 96.76,
+    "steps_to_195": 5841,
+    "steps_to_475": 14161,
+    "total_env_steps": 25680,
+    "train_time_s": 47.1,
+    "n_parameters": 17410,
+    "checkpoint": "checkpoints/workshop3_sweep/gamma_0.95_s42.pt"
+  },
+  "config": {
+    "name": "gamma_0.95",
+    "learning_rate": 0.001,
+    "gamma": 0.95,
+    "epsilon_start": 1.0,
+    "epsilon_min": 0.01,
+    "epsilon_decay": 0.99,
+    "weight_decay": 0.0,
+    "shaping_scale": 1.0,
+    "hidden_sizes": [
+      128,
+      128
+    ],
+    "buffer_size": 50000,
+    "batch_size": 64,
+    "learning_starts": 1000,
+    "train_freq": 1,
+    "target_update": 500,
+    "double_dqn": false,
+    "grad_clip": 10.0,
+    "episodes": 300,
+    "eval_every": 10
+  }
+}
