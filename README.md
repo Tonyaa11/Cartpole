@@ -142,14 +142,10 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── w2_lstm_best.pt          # W4: copy of W2 LSTM for W4 anomaly comparison
 │   └── workshop4/               # W4: per-run checkpoints (AE/VAE/DAE sweep)
 ├── runs/
-│   ├── baseline_results_*.csv   # W1 results
-│   ├── train_log_*.csv          # W2 per-epoch logs
-│   ├── train_summary_*.json     # W2 run summary
-│   ├── eval_*.json              # W2 test metrics
-│   ├── comparison_*.csv         # W2 vs W1 table
-│   ├── tb/                      # W2 TensorBoard event files
-│   ├── workshop3/               # W3 TensorBoard logs, sweep & test results
-│   └── workshop4/               # W4 training logs, anomaly & latent results
+│   ├── workshop1/               # W1: baseline_results_*.csv/.json
+│   ├── workshop2/               # W2: train_log_*.csv, train_summary_*.json, eval_*.json, tb/
+│   ├── workshop3/               # W3: TensorBoard logs, sweep & test results
+│   └── workshop4/               # W4: training logs, anomaly & latent results
 ├── configs/
 │   └── sweep.json               # W3: 6 hyperparameter configurations
 ├── reports/
@@ -531,10 +527,8 @@ W3 — failure avoidance / control (100 held-out initial states):
 
 Result files are included in the `runs/` directory. They contain:
 
-* Test metrics of the three baselines in three settings (engineered, raw, augmented)
-* Confusion-matrix counts
-* Decision threshold selected on validation and fit time
-* **Workshop 2:** per-epoch training/validation logs (`train_log_*.csv`), run summaries (`train_summary_*.json`), test evaluation (`eval_*.json`), the W1-vs-W2 comparison table (`comparison_*.csv`) and TensorBoard event files (`tb/`)
+* **Workshop 1** (`runs/workshop1/`): test metrics of the three baselines in three settings (engineered, raw, augmented), confusion-matrix counts, decision threshold and fit time
+* **Workshop 2** (`runs/workshop2/`): per-epoch training/validation logs (`train_log_*.csv`), run summaries (`train_summary_*.json`), test evaluation (`eval_*.json`), W1-vs-W2 comparison table (`comparison_*.csv`) and TensorBoard event files (`tb/`)
 * **Workshop 3:** TensorBoard events and CSV logs for 18 training runs (`runs/workshop3/`), `sweep_results.json`, `test_results.json`, `trajectories.json`, `env_validation.json`
 * **Workshop 4:** Per-run training logs and TensorBoard events (`runs/workshop4/`), `reconstruction_results.json`, `anomaly_results.json`, `latent_results.json`, `training_summary.csv`, `w3_monitoring.json`
 

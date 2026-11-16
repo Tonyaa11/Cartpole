@@ -69,7 +69,7 @@ from sequences import (
     feature_count,
 )
 
-RUNS_DIR = ROOT_DIR / "runs"
+RUNS_DIR = ROOT_DIR / "runs" / "workshop2"
 CKPT_DIR = ROOT_DIR / "checkpoints"
 TB_DIR = RUNS_DIR / "tb"
 

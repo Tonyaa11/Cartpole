@@ -47,9 +47,9 @@ from model import build_model
 from sequences import build_all_partitions
 from train_lstm import best_f1_threshold, evaluate_loader, make_loaders, set_global_seed
 
-RUNS_DIR = ROOT_DIR / "runs"
+RUNS_DIR = ROOT_DIR / "runs" / "workshop2"
 CKPT_PATH = ROOT_DIR / "checkpoints" / "model_best.pt"
-W1_RESULTS = RUNS_DIR / "baseline_results_base.csv"
+W1_RESULTS = ROOT_DIR / "runs" / "workshop1" / "baseline_results_base.csv"
 
 
 def load_checkpoint(path: Path = CKPT_PATH) -> dict:

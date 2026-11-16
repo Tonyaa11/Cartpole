@@ -64,7 +64,7 @@ from dataset import (
 )
 from features import build_features
 
-RUNS_DIR = ROOT_DIR / "runs"
+RUNS_DIR = ROOT_DIR / "runs" / "workshop1"
 
 
 # --------------------------------------------------------------------------- #

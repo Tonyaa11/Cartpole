@@ -467,7 +467,7 @@ def write_tex(diag, sweep, test, curves) -> None:
     })
 
     # Workshop 1 results (read from the W1 result files of the repository)
-    w1_file = RUNS_DIR.parent / "baseline_results_base.csv"
+    w1_file = RUNS_DIR.parent / "workshop1" / "baseline_results_base.csv"
     if w1_file.exists():
         w1 = pd.read_csv(w1_file)
         gb = w1[(w1["model"] == "Gradient Boosting") & (w1["setting"] == "test @ val-threshold")].iloc[0]
