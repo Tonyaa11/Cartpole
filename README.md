@@ -1,14 +1,16 @@
-# CartPole Machine Learning Project: Workshops 1–3
+# CartPole Machine Learning Project: Workshops 1–4
 
 ## 1. Overview
 
-This repository contains Workshops 1, 2, and 3 of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). The project centres on the CartPole-v1 environment and progresses from failure *prediction* (W1 & W2) to failure *avoidance* (W3).
+This repository contains Workshops 1, 2, 3, and 4 of the Machine Learning course (Semester 2026-III, Universidad Distrital Francisco José de Caldas). The project centres on the CartPole-v1 environment and progresses from failure *prediction* (W1 & W2) to failure *avoidance* (W3) and unsupervised *representation learning* (W4).
 
 **Workshop 1** covers dataset verification, exploratory data analysis, a leakage-free preprocessing pipeline (episode-level split), three supervised baselines (Logistic Regression, Random Forest, Gradient Boosting) and reproducible experiments with fixed seeds.
 
 **Workshop 2** adds a deep learning model: an LSTM that reads a window of the last 16 steps of each episode, trained with position-weighted BCE loss, AdamW, cosine learning-rate schedule, dropout, weight decay, gradient clipping and early stopping. Training is logged to TensorBoard and CSV, the best checkpoint is saved to `checkpoints/model_best.pt`, and the test results are compared against the Workshop 1 baselines.
 
 **Workshop 3** formulates CartPole control as an MDP and trains a Deep Q-Network (DQN) from scratch in PyTorch. A hyperparameter sweep over 6 configurations × 3 seeds is run; the best agent is evaluated against five baseline policies (including the Workshop 1 classifier used as a controller) on 100 held-out initial states, in both nominal and noisy conditions.
+
+**Workshop 4** trains unsupervised generative models (Autoencoder, Variational Autoencoder with β-VAE sweep, Denoising AE) on the CartPole state sequences. The best model (β-VAE, β=4, z=2) is used for anomaly detection (pre-failure state identification), latent-space analysis (t-SNE, UMAP, feature correlation), and monitoring of the Workshop 3 DQN agent.
 
 **Group:** 5 | **Authors:** `Miguel Angel Torres Ramirez, Cristian David Romero Gil, Omar Esteban Peña Sanchez`
 
@@ -80,7 +82,7 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ```python
 !git clone https://github.com/Tonyaa11/Cartpole.git cartpole-ml
 %cd cartpole-ml
-!python dataset_info.py
+!python src/dataset_info.py
 !python src/baselines.py
 ```
 
@@ -101,6 +103,7 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── dataset.py               # W1: loading, split, scaling, augmentation
 │   ├── features.py              # W1: 16 engineered features
 │   ├── baselines.py             # W1+W3: ML supervised baselines + RL policy baselines
+│   ├── dataset_info.py          # W1: dataset summary and checksum
 │   ├── make_figures.py          # W1: report figures
 │   ├── model.py                 # W2: LSTM/GRU architecture
 │   ├── sequences.py             # W2: past-only sliding windows
@@ -114,14 +117,30 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── evaluate.py              # W3: DQN test evaluation
 │   ├── common.py                # W3: shared paths and seeds
 │   ├── w1_bridge.py             # W3: W1 classifier as controller
-│   └── make_report_assets_w3.py # W3: figures and LaTeX tables
+│   ├── make_report_assets_w3.py # W3: figures and LaTeX tables
+│   ├── autoencoder.py           # W4: AE / VAE / DAE architectures
+│   ├── train_ae.py              # W4: AE/VAE training loop
+│   ├── evaluate_ae.py           # W4: reconstruction + anomaly detection evaluation
+│   ├── analyze_latent.py        # W4: t-SNE, UMAP, feature correlation
+│   ├── monitor_w3.py            # W4: DQN agent monitoring via latent space
+│   ├── w2_encoder.py            # W4: bridge to W2 LSTM encoder
+│   ├── w4_common.py             # W4: shared paths and helpers
+│   └── make_report_w4.py        # W4: figures and LaTeX tables
 ├── notebooks/
 │   ├── eda.ipynb                # W1: exploratory data analysis
-│   └── workshop3_colab.ipynb   # W3: step-by-step Colab runner
+│   ├── workshop3_colab.ipynb    # W3: step-by-step Colab runner
+│   └── workshop4_colab.ipynb    # W4: step-by-step Colab runner
 ├── checkpoints/
-│   ├── model_best.pt            # W2: best model (highest validation F1)
+│   ├── model_best.pt            # W2: best LSTM model (highest validation F1)
 │   ├── agent_best.pt            # W3: best DQN agent (highest validation return)
-│   └── workshop3_sweep/         # W3: best checkpoint per config × seed
+│   ├── workshop3_sweep/         # W3: best checkpoint per config × seed
+│   ├── ae_best.pt               # W4: best AE checkpoint
+│   ├── vae_best.pt              # W4: best VAE checkpoint (β=4, z=2, all regimes)
+│   ├── ae_normal_best.pt        # W4: best AE (normal regime only)
+│   ├── vae_normal_best.pt       # W4: best VAE (normal regime only)
+│   ├── mlp_control.pt           # W4: supervised MLP control probe
+│   ├── w2_lstm_best.pt          # W4: copy of W2 LSTM for W4 anomaly comparison
+│   └── workshop4/               # W4: per-run checkpoints (AE/VAE/DAE sweep)
 ├── runs/
 │   ├── baseline_results_*.csv   # W1 results
 │   ├── train_log_*.csv          # W2 per-epoch logs
@@ -129,12 +148,15 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── eval_*.json              # W2 test metrics
 │   ├── comparison_*.csv         # W2 vs W1 table
 │   ├── tb/                      # W2 TensorBoard event files
-│   └── workshop3/               # W3 TensorBoard logs, sweep & test results
+│   ├── workshop3/               # W3 TensorBoard logs, sweep & test results
+│   └── workshop4/               # W4 training logs, anomaly & latent results
 ├── configs/
 │   └── sweep.json               # W3: 6 hyperparameter configurations
-├── group5_workshop1.pdf
-├── group5_workshop2.pdf
-├── group5_workshop3.pdf
+├── reports/
+│   ├── group5_workshop1.pdf
+│   ├── group5_workshop2.pdf
+│   ├── group5_workshop3.pdf
+│   └── group5_workshop4.pdf
 └── README.md
 ```
 
@@ -310,10 +332,10 @@ Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schema
 python src/env.py
 
 # 2. Run the full hyperparameter sweep (6 configs × 3 seeds, ~20–40 min)
-python src/train_rl.py --sweep
+python src/train.py --sweep
 
 # 3. Evaluate the best agent and all baselines on 100 test states
-python src/evaluate_rl.py
+python src/evaluate.py
 
 # 4. Generate figures and LaTeX tables for the report
 python src/make_report_assets_w3.py
@@ -326,7 +348,59 @@ Google Colab: open `notebooks/workshop3_colab.ipynb` and run all cells.
 
 ---
 
-## 8. Results Visualization
+## 8. Workshop 4: Generative Models and Latent Representation
+
+All commands run from the repository root and reuse the same episode split (`data/splits.json`).
+
+```bash
+# 1. Train all AE/VAE/DAE configurations (β sweep, z-dim sweep, ~10 min total)
+python src/train_ae.py --sweep
+
+# 2. Evaluate reconstruction quality and anomaly detection
+python src/evaluate_ae.py
+
+# 3. Latent-space analysis (t-SNE, UMAP, feature correlation)
+python src/analyze_latent.py
+
+# 4. Monitor W3 DQN agent through the VAE latent space
+python src/monitor_w3.py
+
+# 5. Generate figures and LaTeX tables
+python src/make_report_w4.py
+
+# 6. Watch TensorBoard training curves
+tensorboard --logdir runs/workshop4 --port 6007
+```
+
+Google Colab: open `notebooks/workshop4_colab.ipynb` and run all cells.
+
+### 8.1 Selected Model
+
+β-VAE (β=4, z=2, trained on normal-regime episodes) — chosen by highest validation anomaly ROC-AUC (0.958).
+
+### 8.2 Anomaly Detection Results (test set, threshold from validation)
+
+| Model | ROC-AUC | PR-AUC | F1 | Precision | Recall |
+|---|---|---|---|---|---|
+| AE (z=2) | 0.838 | 0.383 | 0.383 | 0.354 | 0.417 |
+| VAE recon (β=4, z=2) | 0.934 | 0.607 | 0.594 | 0.664 | 0.538 |
+| **VAE recon+KL (β=4, z=2)** | **0.961** | **0.674** | **0.628** | **0.646** | **0.610** |
+| Denoising AE (z=2) | 0.808 | 0.336 | 0.310 | 0.304 | 0.317 |
+| LSTM W2 (supervised reference) | 0.997 | 0.956 | 0.865 | 0.812 | 0.924 |
+
+### 8.3 Latent Space Probe Classification (failure label)
+
+| Representation | Probe ROC-AUC | Probe PR-AUC | Silhouette |
+|---|---|---|---|
+| Input space (16-D) | 0.981 | 0.791 | 0.208 |
+| AE latent (z=2) | 0.924 | 0.377 | 0.219 |
+| VAE latent (z=2) | 0.571 | 0.065 | 0.210 |
+| W2 LSTM (supervised) | 0.997 | 0.952 | 0.372 |
+| MLP control (supervised) | 0.997 | 0.961 | 0.647 |
+
+---
+
+## 9. Results Visualization (Workshop 1)
 
 There is no TensorBoard in Workshop 1 (it is used in Workshops 2 and 3). Workshop 1 results are read from:
 
@@ -341,7 +415,7 @@ Figures are saved by `src/make_figures.py` in `report/figures/`. Each CSV file h
 
 ---
 
-## 9. Reproducibility
+## 10. Reproducibility
 
 All experiments are reproducible due to:
 
@@ -383,7 +457,7 @@ To reproduce the Workshop 2 results:
 
 ---
 
-## 9. Workshop 3: Reinforcement Learning Agent (DQN)
+## 11. Workshop 3: Reinforcement Learning Agent (DQN)
 
 
 
@@ -453,7 +527,7 @@ W3 — failure avoidance / control (100 held-out initial states):
 
 ---
 
-## 10. Logging Artifacts
+## 12. Logging Artifacts
 
 Result files are included in the `runs/` directory. They contain:
 
@@ -462,12 +536,13 @@ Result files are included in the `runs/` directory. They contain:
 * Decision threshold selected on validation and fit time
 * **Workshop 2:** per-epoch training/validation logs (`train_log_*.csv`), run summaries (`train_summary_*.json`), test evaluation (`eval_*.json`), the W1-vs-W2 comparison table (`comparison_*.csv`) and TensorBoard event files (`tb/`)
 * **Workshop 3:** TensorBoard events and CSV logs for 18 training runs (`runs/workshop3/`), `sweep_results.json`, `test_results.json`, `trajectories.json`, `env_validation.json`
+* **Workshop 4:** Per-run training logs and TensorBoard events (`runs/workshop4/`), `reconstruction_results.json`, `anomaly_results.json`, `latent_results.json`, `training_summary.csv`, `w3_monitoring.json`
 
 They can be inspected directly without retraining. `checkpoints/model_best.pt` contains the best Workshop 2 model and `checkpoints/agent_best.pt` contains the best Workshop 3 DQN agent.
 
 ---
 
-## 11. Notes
+## 13. Notes
 
 * Training is CPU-based. W1 baselines: ~30 s; W2 LSTM: ~3 min (40 epochs); W3 full sweep: 20–40 min.
 * Accuracy is not a decision metric for W1/W2: a classifier that always predicts "safe" already reaches 94.5 %. Recall and PR-AUC are the key metrics.
