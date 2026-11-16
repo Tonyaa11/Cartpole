@@ -27,7 +27,7 @@ import torch
 from dataset import EPISODE_COL, RAW_FEATURE_COLS, ROOT_DIR, load_raw, load_splits
 from model import build_model
 from sequences import compute_features, window_episodes
-from train import set_global_seed
+from train_lstm import set_global_seed
 
 CKPT_PATH = ROOT_DIR / "checkpoints" / "model_best.pt"
 

@@ -100,19 +100,18 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ├── src/
 │   ├── dataset.py               # W1: loading, split, scaling, augmentation
 │   ├── features.py              # W1: 16 engineered features
-│   ├── baselines.py             # W1: supervised baselines (LR, RF, GBT)
+│   ├── baselines.py             # W1+W3: ML supervised baselines + RL policy baselines
 │   ├── make_figures.py          # W1: report figures
 │   ├── model.py                 # W2: LSTM/GRU architecture
 │   ├── sequences.py             # W2: past-only sliding windows
-│   ├── train.py                 # W2: training loop + TensorBoard/CSV logs
-│   ├── evaluate.py              # W2: test evaluation + W1 comparison table
+│   ├── train_lstm.py            # W2: LSTM training loop + TensorBoard/CSV logs
+│   ├── evaluate_lstm.py         # W2: LSTM test evaluation + W1 comparison table
 │   ├── test_model.py            # W2: load checkpoint and run inference
 │   ├── make_figures_w2.py       # W2: report figures
 │   ├── env.py                   # W3: custom Gymnasium environment
 │   ├── agent.py                 # W3: DQN agent
-│   ├── baselines_rl.py          # W3: RL policy baselines (random, PD, W1-guided)
-│   ├── train_rl.py              # W3: DQN training loop + sweep
-│   ├── evaluate_rl.py           # W3: test evaluation
+│   ├── train.py                 # W3: DQN training loop + sweep
+│   ├── evaluate.py              # W3: DQN test evaluation
 │   ├── common.py                # W3: shared paths and seeds
 │   ├── w1_bridge.py             # W3: W1 classifier as controller
 │   └── make_report_assets_w3.py # W3: figures and LaTeX tables
@@ -249,12 +248,12 @@ Prints the output shape and the parameter count of the architecture (default: 2-
 ### 6.2 Training
 
 ```bash
-python src/train.py                                  # default: LSTM, window 16, raw features
-python src/train.py --cell gru --window 16           # GRU variant
-python src/train.py --window 32                      # longer history
-python src/train.py --hidden 128                     # wider model
-python src/train.py --features engineered            # 16 engineered features per step
-python src/train.py --augment                        # noise augmentation (train only)
+python src/train_lstm.py                                  # default: LSTM, window 16, raw features
+python src/train_lstm.py --cell gru --window 16           # GRU variant
+python src/train_lstm.py --window 32                      # longer history
+python src/train_lstm.py --hidden 128                     # wider model
+python src/train_lstm.py --features engineered            # 16 engineered features per step
+python src/train_lstm.py --augment                        # noise augmentation (train only)
 ```
 
 This will:
@@ -277,7 +276,7 @@ tensorboard --logdir runs/tb
 ### 6.3 Test-Set Evaluation and Comparison with Workshop 1
 
 ```bash
-python src/evaluate.py
+python src/evaluate_lstm.py
 ```
 
 This will:
@@ -374,8 +373,8 @@ Workshop 1 main result on the test set (60 episodes, threshold chosen on validat
 
 To reproduce the Workshop 2 results:
 
-1. `python src/train.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
-2. `python src/evaluate.py` (test metrics + comparison table)
+1. `python src/train_lstm.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
+2. `python src/evaluate_lstm.py` (test metrics + comparison table)
 3. `python src/make_figures_w2.py` (report figures)
 4. Compare with `runs/eval_*.json` and `runs/comparison_*.csv`
 

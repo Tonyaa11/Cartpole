@@ -1,574 +1,345 @@
 """
-Training script for the CartPole failure-prediction deep model (Workshop 2).
+train.py - Training loop, validation and hyperparameter sweep for the DQN agent.
 
-Machine Learning - Workshop 2 (Advanced Learning Models, Part A)
+Machine Learning - Workshop 3 (Reinforcement Learning)
 
-What it does
-------------
-1. Loads the raw CSV and the EPISODE split of ``data/splits.json`` (the same
-   split used by the Workshop 1 baselines - never re-split).
-2. Builds past-only sliding windows (``src/sequences.py``) with a z-score
-   scaler fitted on TRAIN only.
-3. Trains the recurrent model of ``src/model.py`` with:
-   * loss: BCE-with-logits POSITION-WEIGHTED for the 17.2:1 imbalance
-     (equivalent to class weighting in the loss, as recommended by the brief);
-   * optimizer: AdamW (decoupled weight decay);
-   * LR schedule: cosine annealing with warm restarts-free decay;
-   * regularisation: dropout, weight decay and early stopping;
-   * gradient clipping (RNNs are prone to exploding gradients).
-4. Logs every epoch to TensorBoard (``runs/tb/<run_name>``) AND to a CSV
-   (``runs/train_log_<run_name>.csv``) so the learning curves can be
-   reproduced without TensorBoard.
-5. Saves the BEST model (highest validation F1 at the validation-selected
-   threshold) to ``checkpoints/model_best.pt`` together with the scaler, the
-   window configuration and the selected threshold - everything needed to
-   reload it in ``src/evaluate.py`` / ``src/test_model.py``.
+One *run* = one configuration trained with one seed:
+    * every episode: act epsilon-greedily, store transitions, one gradient step
+      per environment step, decay epsilon at the end of the episode;
+    * every ``eval_every`` episodes: greedy evaluation (epsilon = 0) on the 10
+      fixed VALIDATION initial states; the checkpoint with the highest validation
+      return is kept (``checkpoints/workshop3_sweep/<config>_s<seed>.pt``).
+
+The *sweep* trains every configuration in ``configs/sweep.json`` with the three
+seeds (42, 7, 99), selects the best configuration on validation only, and copies
+its best run to ``checkpoints/agent_best.pt``. The test set is never touched here.
 
 Usage
 -----
-    python src/train.py                       # default LSTM run
-    python src/train.py --cell gru --window 32
-    python src/train.py --features engineered  # 16 engineered features
-    python src/train.py --epochs 60 --lr 3e-3
+    python src/train_rl.py --sweep                       # full sweep (5 configs x 3 seeds)
+    python src/train_rl.py --config reference --seed 42  # a single run
+    python src/train_rl.py --sweep --episodes 50         # quick smoke test
+    python src/train_rl.py --select-only                 # redo the selection from the logs
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import json
-import random
+import shutil
 import time
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
-import torch.nn as nn
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    confusion_matrix,
-    f1_score,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
-from torch.utils.data import DataLoader, TensorDataset
-from torch.utils.tensorboard import SummaryWriter
 
-from dataset import EPISODE_COL, ROOT_DIR, SEED, get_or_create_splits, load_raw, load_splits
-from model import FailurePredictor, build_model
-from sequences import (
-    MODE_ENGINEERED,
-    MODE_RAW,
-    build_all_partitions,
-    compute_features,
-    describe_partition,
-    feature_count,
-)
+from agent import DQNAgent, DQNConfig
+from common import (CKPT_DIR, CONFIG_FILE, ROOT_DIR, RUNS_DIR, SWEEP_CKPT_DIR, TRAIN_SEED_LOW,
+                    TRAIN_SEEDS, VAL_SEEDS, load_json, save_json, set_global_seed)
+from env import make_env
 
-RUNS_DIR = ROOT_DIR / "runs"
-CKPT_DIR = ROOT_DIR / "checkpoints"
-TB_DIR = RUNS_DIR / "tb"
+# Return thresholds used in the sample-efficiency analysis
+SOLVED_THRESHOLD = 475.0   # Gymnasium's official reward threshold for CartPole-v1
+HALF_THRESHOLD = 195.0     # historical CartPole-v0 threshold, an "early competence" level
+
+try:  # TensorBoard is optional: CSV logs are always written
+    from torch.utils.tensorboard import SummaryWriter
+except Exception:  # pragma: no cover
+    SummaryWriter = None
 
 
-# --------------------------------------------------------------------------- #
-# Reproducibility
-# --------------------------------------------------------------------------- #
-def set_global_seed(seed: int = SEED) -> None:
-    """Fix Python, NumPy and PyTorch random seeds (and cuDNN determinism).
+def evaluate_policy(agent: DQNAgent, seeds: List[int]) -> Dict[str, Any]:
+    """Greedy evaluation (epsilon = 0) on a fixed list of initial states.
+
+    The return reported is the TASK return (+1 per step survived), so every
+    configuration is compared on the same quantity whatever its shaping.
 
     Args:
-        seed (int): Seed value.
+        agent (DQNAgent): Agent to evaluate.
+        seeds (List[int]): Reset seeds, one episode per seed.
+
+    Returns:
+        Dict[str, Any]: mean and std of the task return, the list of returns and
+        the share of episodes that ended by cart position or by pole angle.
+    """
+    env = make_env()  # evaluation env: task reward only, no noise
+    returns, outcomes = [], []
+    for s in seeds:
+        obs, _ = env.reset(seed=s)
+        done, ret = False, 0.0
+        while not done:
+            obs, _, term, trunc, info = env.step(agent.act(obs, epsilon=0.0))
+            ret += info["task_reward"]
+            done = term or trunc
+        returns.append(ret)
+        outcomes.append(info["outcome"])
+    return {"mean": float(np.mean(returns)), "std": float(np.std(returns)), "returns": returns,
+            "x_failure_rate": float(np.mean([o == "failure_x" for o in outcomes])),
+            "theta_failure_rate": float(np.mean([o == "failure_theta" for o in outcomes]))}
+
+
+def first_step_reaching(steps: List[int], values: List[float], threshold: float) -> Optional[int]:
+    """Environment steps needed until a curve first reaches a threshold.
+
+    Args:
+        steps (List[int]): Cumulative environment steps at each evaluation.
+        values (List[float]): Curve values (smoothed validation return).
+        threshold (float): Target value.
+
+    Returns:
+        Optional[int]: First step count with value >= threshold, or None.
+    """
+    for s, v in zip(steps, values):
+        if v >= threshold:
+            return int(s)
+    return None
+
+
+def train_run(cfg: DQNConfig, seed: int, verbose: bool = True) -> Dict[str, Any]:
+    """Train one configuration with one seed and keep its best checkpoint.
+
+    Args:
+        cfg (DQNConfig): Hyperparameters.
+        seed (int): Seed (network init, exploration, replay sampling, episode starts).
+        verbose (bool): Print a progress line at every validation.
+
+    Returns:
+        Dict[str, Any]: Summary of the run (best validation return, final smoothed
+        validation return, steps to thresholds, wall-clock time...).
+    """
+    set_global_seed(seed)
+    run_name = f"{cfg.name}_s{seed}"
+    log_dir = RUNS_DIR / cfg.name / f"seed_{seed}"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    ckpt_path = SWEEP_CKPT_DIR / f"{run_name}.pt"
+
+    env = make_env(shaping_scale=cfg.shaping_scale, gamma=cfg.gamma)
+    agent = DQNAgent(cfg, seed=seed)
+    episode_seeds = np.random.RandomState(seed).randint(TRAIN_SEED_LOW, 2**31 - 1, size=cfg.episodes)
+
+    writer = SummaryWriter(log_dir=str(log_dir)) if SummaryWriter is not None else None
+    ep_rows: List[Dict[str, Any]] = []
+    val_rows: List[Dict[str, Any]] = []
+    best_val, best_episode = -np.inf, 0
+    total_steps, t0 = 0, time.time()
+
+    for ep in range(1, cfg.episodes + 1):
+        obs, _ = env.reset(seed=int(episode_seeds[ep - 1]))
+        done, ret_shaped, ret_task, losses = False, 0.0, 0.0, []
+        while not done:
+            action = agent.act(obs)                                   # epsilon-greedy
+            next_obs, reward, term, trunc, info = env.step(action)
+            agent.buffer.add(obs, action, reward, next_obs, term)     # only failures are terminal
+            obs = next_obs
+            ret_shaped += reward
+            ret_task += info["task_reward"]
+            total_steps += 1
+            done = term or trunc
+            if total_steps % cfg.train_freq == 0:
+                loss = agent.update()
+                if loss is not None:
+                    losses.append(loss)
+
+        row = {"episode": ep, "env_steps": total_steps, "length": env.steps,
+               "task_return": ret_task, "shaped_return": round(ret_shaped, 4),
+               "epsilon": round(agent.epsilon, 5), "outcome": info["outcome"],
+               "mean_loss": float(np.mean(losses)) if losses else float("nan")}
+        ep_rows.append(row)
+        if writer:
+            writer.add_scalar("train/task_return", ret_task, total_steps)
+            writer.add_scalar("train/shaped_return", ret_shaped, total_steps)
+            writer.add_scalar("train/episode_length", env.steps, total_steps)
+            writer.add_scalar("train/epsilon", agent.epsilon, total_steps)
+            if losses:
+                writer.add_scalar("train/td_loss", row["mean_loss"], total_steps)
+        agent.decay_epsilon()  # per-episode exploration decay
+
+        # ---- periodic validation without exploration ----------------------- #
+        if ep % cfg.eval_every == 0 or ep == cfg.episodes:
+            val = evaluate_policy(agent, VAL_SEEDS)
+            recent = [r["val_return"] for r in val_rows[-2:]] + [val["mean"]]
+            smoothed = float(np.mean(recent))   # moving average of the last 3 evaluations
+            val_rows.append({"episode": ep, "env_steps": total_steps, "val_return": val["mean"],
+                             "val_std": val["std"], "val_smoothed": smoothed,
+                             "val_x_failure_rate": val["x_failure_rate"],
+                             "val_theta_failure_rate": val["theta_failure_rate"],
+                             "epsilon": round(agent.epsilon, 5)})
+            if writer:
+                writer.add_scalar("val/return", val["mean"], total_steps)
+                writer.add_scalar("val/return_smoothed", smoothed, total_steps)
+            # ">=" keeps the most trained checkpoint among equally good ones
+            if val["mean"] >= best_val:
+                best_val, best_episode = val["mean"], ep
+                agent.save(ckpt_path, extra={"episode": ep, "env_steps": total_steps,
+                                             "val_return": val["mean"], "seed": seed})
+            if verbose:
+                print(f"  [{run_name}] ep {ep:4d} | steps {total_steps:7d} | eps {agent.epsilon:.3f} | "
+                      f"train len {env.steps:3d} | val {val['mean']:6.1f} (smoothed {smoothed:6.1f})")
+
+    elapsed = time.time() - t0
+    if writer:
+        writer.close()
+
+    # ---- save the logs used by the figures and the report ------------------ #
+    for name, rows in (("episodes.csv", ep_rows), ("validation.csv", val_rows)):
+        with open(log_dir / name, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+            w.writeheader()
+            w.writerows(rows)
+
+    v_steps = [r["env_steps"] for r in val_rows]
+    v_smooth = [r["val_smoothed"] for r in val_rows]
+    summary = {
+        "config": cfg.name, "seed": seed, "best_val_return": float(best_val),
+        "best_episode": best_episode,
+        "final_val_smoothed": float(np.mean([r["val_return"] for r in val_rows[-5:]])),
+        "steps_to_195": first_step_reaching(v_steps, v_smooth, HALF_THRESHOLD),
+        "steps_to_475": first_step_reaching(v_steps, v_smooth, SOLVED_THRESHOLD),
+        "total_env_steps": total_steps, "train_time_s": round(elapsed, 1),
+        "n_parameters": agent.n_parameters(), "checkpoint": str(ckpt_path.relative_to(ROOT_DIR)),
+    }
+    save_json({"summary": summary, "config": cfg.to_dict()}, log_dir / "summary.json")
+    return summary
+
+
+def select_best(summaries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Choose the best configuration using VALIDATION results only.
+
+    Criterion: highest mean (over seeds) of the best validation return; ties are
+    broken by the mean final smoothed validation return (stability at the end of
+    training), then by fewer steps to reach 475.
+
+    Args:
+        summaries (List[Dict[str, Any]]): One summary per run.
+
+    Returns:
+        Dict[str, Any]: Aggregated table per configuration and the chosen
+        configuration / run.
+    """
+    by_cfg: Dict[str, List[Dict[str, Any]]] = {}
+    for s in summaries:
+        by_cfg.setdefault(s["config"], []).append(s)
+
+    table = []
+    for name, runs in by_cfg.items():
+        steps475 = [r["steps_to_475"] for r in runs]
+        reached = [s for s in steps475 if s is not None]
+        table.append({
+            "config": name,
+            "best_val_mean": float(np.mean([r["best_val_return"] for r in runs])),
+            "best_val_std": float(np.std([r["best_val_return"] for r in runs])),
+            "final_val_mean": float(np.mean([r["final_val_smoothed"] for r in runs])),
+            "final_val_std": float(np.std([r["final_val_smoothed"] for r in runs])),
+            "runs_reaching_475": len(reached),
+            "steps_to_475_mean": float(np.mean(reached)) if reached else None,
+            "train_time_mean_s": float(np.mean([r["train_time_s"] for r in runs])),
+        })
+    key = lambda t: (t["best_val_mean"], t["final_val_mean"],
+                     -(t["steps_to_475_mean"] or float("inf")))
+    best_cfg = max(table, key=key)["config"]
+    best_run = max(by_cfg[best_cfg], key=lambda r: (r["best_val_return"], r["final_val_smoothed"]))
+    return {"table": table, "best_config": best_cfg, "best_run": best_run}
+
+
+def run_sweep(config_names: Optional[List[str]] = None, episodes: Optional[int] = None) -> None:
+    """Train all configurations x seeds, select the best one, save agent_best.pt.
+
+    Args:
+        config_names (Optional[List[str]]): Subset of configurations to run.
+        episodes (Optional[int]): Override the number of episodes (smoke tests).
 
     Returns:
         None
     """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    base = load_json(CONFIG_FILE)
+    configs = [DQNConfig.from_dict({**base["defaults"], **c}) for c in base["configs"]]
+    if config_names:
+        configs = [c for c in configs if c.name in config_names]
+
+    summaries = []
+    for cfg in configs:
+        if episodes:
+            cfg.episodes = episodes
+        print("\n" + "=" * 72)
+        print(f"CONFIG {cfg.name}: lr={cfg.learning_rate} gamma={cfg.gamma} "
+              f"eps_decay={cfg.epsilon_decay} weight_decay={cfg.weight_decay} shaping k={cfg.shaping_scale}")
+        print("=" * 72)
+        for seed in TRAIN_SEEDS:
+            s = train_run(cfg, seed)
+            summaries.append(s)
+            print(f"  => {cfg.name} seed {seed}: best val {s['best_val_return']:.1f} "
+                  f"(ep {s['best_episode']}) | final val {s['final_val_smoothed']:.1f} | "
+                  f"{s['total_env_steps']} steps | {s['train_time_s']:.0f}s")
+
+    finalize_sweep([c.name for c in configs])
 
 
-# --------------------------------------------------------------------------- #
-# Data
-# --------------------------------------------------------------------------- #
-def make_loaders(
-    parts: Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray]],
-    batch_size: int,
-    seed: int = SEED,
-) -> Dict[str, DataLoader]:
-    """Wrap the numpy partitions into DataLoaders.
-
-    Args:
-        parts (dict): ``{"train": (X, lengths, y), ...}``.
-        batch_size (int): Batch size.
-        seed (int): Seed of the train-shuffle generator.
-
-    Returns:
-        Dict[str, DataLoader]: Loaders per partition (train is shuffled).
-    """
-    loaders = {}
-    for name, (X, L, y) in parts.items():
-        ds = TensorDataset(
-            torch.from_numpy(X),
-            torch.from_numpy(L.astype(np.int64)),
-            torch.from_numpy(y),
-        )
-        shuffle = name == "train"
-        gen = torch.Generator().manual_seed(seed) if shuffle else None
-        loaders[name] = DataLoader(
-            ds,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            generator=gen,
-            num_workers=0,  # Windows-safe
-            drop_last=False,
-        )
-    return loaders
-
-
-def positive_weight(y_train: np.ndarray) -> torch.Tensor:
-    """Compute the BCE pos_weight = n_negative / n_positive on TRAIN only.
+def finalize_sweep(config_names: Optional[List[str]] = None) -> None:
+    """Gather the saved run summaries, select the best configuration and copy
+    its best checkpoint to ``checkpoints/agent_best.pt``.
 
     Args:
-        y_train (np.ndarray): Training labels.
+        config_names (Optional[List[str]]): Configurations to include (default:
+            every configuration listed in ``configs/sweep.json``).
 
     Returns:
-        torch.Tensor: Scalar tensor with the weight of the positive class.
+        None
     """
-    n_pos = float(y_train.sum())
-    n_neg = float(len(y_train) - n_pos)
-    return torch.tensor(n_neg / max(n_pos, 1.0), dtype=torch.float32)
+    names = config_names or [c["name"] for c in load_json(CONFIG_FILE)["configs"]]
+    summaries = []
+    for name in names:
+        for seed in TRAIN_SEEDS:
+            path = RUNS_DIR / name / f"seed_{seed}" / "summary.json"
+            if path.exists():
+                summaries.append(load_json(path)["summary"])
+    if not summaries:
+        raise SystemExit("No run summaries found: run the sweep first.")
 
+    sel = select_best(summaries)
+    best_src = SWEEP_CKPT_DIR / Path(sel["best_run"]["checkpoint"]).name
+    shutil.copy(best_src, CKPT_DIR / "agent_best.pt")
+    save_json({"runs": summaries, **sel}, RUNS_DIR / "sweep_results.json")
 
-# --------------------------------------------------------------------------- #
-# Metrics helpers (same protocol as Workshop 1)
-# --------------------------------------------------------------------------- #
-def best_f1_threshold(y_true: np.ndarray, scores: np.ndarray) -> float:
-    """Probability threshold that maximises F1 (use on VALIDATION).
-
-    Args:
-        y_true (np.ndarray): True labels.
-        scores (np.ndarray): Positive-class probabilities.
-
-    Returns:
-        float: Threshold with the highest F1.
-    """
-    precision, recall, thresholds = precision_recall_curve(y_true, scores)
-    if thresholds.size == 0:
-        return 0.5
-    f1 = (
-        2 * precision[:-1] * recall[:-1]
-        / np.clip(precision[:-1] + recall[:-1], 1e-12, None)
-    )
-    return float(thresholds[int(np.argmax(f1))])
-
-
-def f1_at_threshold(y_true: np.ndarray, scores: np.ndarray, thr: float) -> float:
-    """F1 score for a given decision threshold.
-
-    Args:
-        y_true (np.ndarray): True labels.
-        scores (np.ndarray): Positive-class probabilities.
-        thr (float): Decision threshold.
-
-    Returns:
-        float: F1 score.
-    """
-    return float(f1_score(y_true, scores >= thr, zero_division=0))
-
-
-# --------------------------------------------------------------------------- #
-# Epoch loops
-# --------------------------------------------------------------------------- #
-def train_one_epoch(
-    model: nn.Module,
-    loader: DataLoader,
-    criterion: nn.Module,
-    optimizer: torch.optim.Optimizer,
-    device: torch.device,
-    max_grad_norm: float = 1.0,
-) -> float:
-    """Train for one epoch and return the mean loss.
-
-    Args:
-        model (nn.Module): Model (train mode).
-        loader (DataLoader): Training loader.
-        criterion (nn.Module): Loss function (receives logits and targets).
-        optimizer (torch.optim.Optimizer): Optimizer.
-        device (torch.device): Compute device.
-        max_grad_norm (float): Gradient-clipping norm (0 disables it).
-
-    Returns:
-        float: Mean training loss of the epoch.
-    """
-    model.train()
-    total, n_batches = 0.0, 0
-    for X, L, y in loader:
-        X, L, y = X.to(device), L.to(device), y.to(device)
-        optimizer.zero_grad()
-        logits = model(X, L)
-        loss = criterion(logits, y)
-        loss.backward()
-        if max_grad_norm and max_grad_norm > 0:
-            nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-        optimizer.step()
-        total += float(loss.item())
-        n_batches += 1
-    return total / max(n_batches, 1)
-
-
-@torch.no_grad()
-def evaluate_loader(
-    model: nn.Module, loader: DataLoader, criterion: nn.Module, device: torch.device
-) -> Tuple[np.ndarray, np.ndarray, float]:
-    """Run the model over a loader and collect labels, probabilities, loss.
-
-    Args:
-        model (nn.Module): Model (eval mode).
-        loader (DataLoader): Loader to iterate.
-        criterion (nn.Module): Loss function.
-        device (torch.device): Compute device.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray, float]: labels, probabilities, mean loss.
-    """
-    model.eval()
-    labels, scores, total, n_batches = [], [], 0.0, 0
-    for X, L, y in loader:
-        X, L, y = X.to(device), L.to(device), y.to(device)
-        logits = model(X, L)
-        loss = criterion(logits, y)
-        total += float(loss.item())
-        n_batches += 1
-        labels.append(y.cpu().numpy())
-        scores.append(torch.sigmoid(logits).cpu().numpy())
-    return (
-        np.concatenate(labels),
-        np.concatenate(scores),
-        total / max(n_batches, 1),
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Training experiment
-# --------------------------------------------------------------------------- #
-def _beats_best(path: Path, val_f1: float) -> bool:
-    """Check whether a new validation F1 beats the checkpoint stored at ``path``.
-
-    Used to decide if the current run deserves to be promoted to
-    ``checkpoints/model_best.pt``. Only the VALIDATION F1 is compared (the
-    test set never decides). A missing or unreadable checkpoint is always
-    beaten.
-
-    Args:
-        path (Path): Candidate checkpoint path (may not exist).
-        val_f1 (float): Validation F1 of the current run.
-
-    Returns:
-        bool: True if ``path`` should be overwritten with the new run.
-    """
-    if not Path(path).exists():
-        return True
-    try:
-        stored = torch.load(path, map_location="cpu", weights_only=False)
-        stored_f1 = float(stored.get("val_metrics", {}).get("val_f1", -1.0))
-    except Exception:
-        return True
-    return val_f1 > stored_f1
-
-
-def train(args: argparse.Namespace) -> dict:
-    """Full training run: data -> model -> loop -> logs -> best checkpoint.
-
-    Args:
-        args (argparse.Namespace): CLI arguments (see ``parse_args``).
-
-    Returns:
-        dict: Summary with best epoch, best validation metrics, threshold,
-        paths of the generated artifacts and the test metrics of the best
-        checkpoint.
-    """
-    set_global_seed(args.seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # ---- Data ------------------------------------------------------------- #
-    df = load_raw()
-    splits = load_splits() if Path(ROOT_DIR / "data" / "splits.json").exists() else get_or_create_splits(df)
-    parts, scaler = build_all_partitions(
-        df, splits, window=args.window, mode=args.features, augment=args.augment
-    )
-    print(f"device: {device} | features: {args.features} | window: {args.window} | cell: {args.cell}")
-    for name, (X, L, y) in parts.items():
-        print("  " + describe_partition(name, X, L, y))
-
-    loaders = make_loaders(parts, args.batch_size, seed=args.seed)
-    pos_w = positive_weight(parts["train"][2]).to(device)
-    feature_cols = list(
-        compute_features(df[df[EPISODE_COL].isin(splits["train"])], args.features).columns
-    )
-
-    # ---- Model ------------------------------------------------------------ #
-    model_cfg = {
-        "input_size": feature_count(args.features),
-        "hidden_size": args.hidden,
-        "num_layers": args.layers,
-        "dropout": args.dropout,
-        "cell": args.cell,
-        "bidirectional": args.bidirectional,
-    }
-    model = build_model(model_cfg).to(device)
-    print(f"model parameters: {model.count_parameters():,}")
-
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_w)
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs, eta_min=args.lr * 0.01
-    )
-
-    # ---- Logging ---------------------------------------------------------- #
-    # Suffix only for non-default capacities so the default run keeps the
-    # stable name used in the README/report (and runs with different hidden
-    # sizes do not clobber each other's logs/checkpoints).
-    capacity = ""
-    if args.hidden != 64:
-        capacity += f"_{args.hidden}h"
-    if args.layers != 2:
-        capacity += f"_L{args.layers}"
-    run_name = (
-        f"w2_{args.cell}_w{args.window}_{args.features}{capacity}"
-        f"{'_bi' if args.bidirectional else ''}"
-        f"{'_aug' if args.augment else ''}"
-    )
-    tb = SummaryWriter(log_dir=str(TB_DIR / run_name))
-    log_path = RUNS_DIR / f"train_log_{run_name}.csv"
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    CKPT_DIR.mkdir(parents=True, exist_ok=True)
-    with open(log_path, "w", newline="") as f:
-        csv.writer(f).writerow(
-            [
-                "epoch", "train_loss", "val_loss", "val_f1", "val_precision",
-                "val_recall", "val_roc_auc", "val_pr_auc", "val_acc",
-                "threshold", "lr", "epoch_time_s",
-            ]
-        )
-
-    # ---- Loop ------------------------------------------------------------- #
-    best = {"val_f1": -1.0, "epoch": -1, "threshold": 0.5}
-    best_path = CKPT_DIR / "model_best.pt"
-    epochs_without_improvement = 0
-    promoted = False  # did THIS run win the global model_best.pt slot?
-    history = []
-
+    print("\n" + "=" * 72)
+    print("SWEEP SUMMARY (validation only)")
     print("=" * 72)
-    print(f"TRAINING {run_name} | epochs={args.epochs} | lr={args.lr} | "
-          f"batch={args.batch_size} | patience={args.patience}")
-    print("=" * 72)
-
-    for epoch in range(1, args.epochs + 1):
-        t0 = time.time()
-        train_loss = train_one_epoch(
-            model, loaders["train"], criterion, optimizer, device, args.grad_clip
-        )
-        scheduler.step()
-
-        y_va, s_va, val_loss = evaluate_loader(
-            model, loaders["val"], criterion, device
-        )
-        thr = best_f1_threshold(y_va, s_va)
-        pred = s_va >= thr
-        val_metrics = {
-            "val_f1": f1_score(y_va, pred, zero_division=0),
-            "val_precision": precision_score(y_va, pred, zero_division=0),
-            "val_recall": recall_score(y_va, pred, zero_division=0),
-            "val_roc_auc": roc_auc_score(y_va, s_va),
-            "val_pr_auc": average_precision_score(y_va, s_va),
-            "val_acc": accuracy_score(y_va, pred),
-        }
-        epoch_time = time.time() - t0
-        lr_now = optimizer.param_groups[0]["lr"]
-
-        row = [
-            epoch, f"{train_loss:.6f}", f"{val_loss:.6f}",
-            *[f"{val_metrics[k]:.6f}" for k in (
-                "val_f1", "val_precision", "val_recall",
-                "val_roc_auc", "val_pr_auc", "val_acc")],
-            f"{thr:.6f}", f"{lr_now:.6e}", f"{epoch_time:.2f}",
-        ]
-        with open(log_path, "a", newline="") as f:
-            csv.writer(f).writerow(row)
-
-        tb.add_scalar("loss/train", train_loss, epoch)
-        tb.add_scalar("loss/val", val_loss, epoch)
-        for k, v in val_metrics.items():
-            tb.add_scalar(f"metrics/{k}", v, epoch)
-        tb.add_scalar("threshold/val", thr, epoch)
-        tb.add_scalar("lr", lr_now, epoch)
-
-        history.append({"epoch": epoch, "train_loss": train_loss,
-                        "val_loss": val_loss, **val_metrics, "threshold": thr})
-
-        improved = val_metrics["val_f1"] > best["val_f1"]
-        if improved:
-            best = {"val_f1": val_metrics["val_f1"], "epoch": epoch,
-                    "threshold": thr, **val_metrics}
-            epochs_without_improvement = 0
-            ckpt_payload = {
-                "model_state": model.state_dict(),
-                "model_cfg": model_cfg,
-                "window": args.window,
-                "features": args.features,
-                "scaler_mean": scaler.mean_.tolist(),
-                "scaler_scale": scaler.scale_.tolist(),
-                "feature_cols": feature_cols,
-                "threshold": thr,
-                "val_metrics": val_metrics,
-                "best_epoch": epoch,
-                "seed": args.seed,
-                "run_name": run_name,
-            }
-            # Per-run checkpoint (so parallel/sequential runs do not clobber
-            # each other) ...
-            torch.save(ckpt_payload, CKPT_DIR / f"model_{run_name}.pt")
-            # ... and promote to model_best.pt only if this run has the best
-            # VALIDATION F1 of all runs so far (workshop rule: highest
-            # validation metric; the test set never decides).
-            if _beats_best(best_path, val_metrics["val_f1"]):
-                torch.save(ckpt_payload, best_path)
-                promoted = True
-        else:
-            epochs_without_improvement += 1
-
-        mark = "  *BEST*" if improved else ""
-        print(
-            f"epoch {epoch:3d}/{args.epochs} | train {train_loss:.4f} | "
-            f"val {val_loss:.4f} | F1 {val_metrics['val_f1']:.3f} "
-            f"(P {val_metrics['val_precision']:.3f} R {val_metrics['val_recall']:.3f}) "
-            f"| AUC {val_metrics['val_roc_auc']:.3f} | PR-AUC {val_metrics['val_pr_auc']:.3f} "
-            f"| thr {thr:.3f} | {epoch_time:.1f}s{mark}"
-        )
-
-        if args.patience and epochs_without_improvement >= args.patience:
-            print(f"early stopping at epoch {epoch} "
-                  f"(no val F1 improvement for {args.patience} epochs)")
-            break
-
-    tb.close()
-
-    # ---- Test evaluation of THIS run's best checkpoint -------------------- #
-    run_ckpt_path = CKPT_DIR / f"model_{run_name}.pt"
-    if not run_ckpt_path.exists():
-        # No epoch improved on the first epoch (val F1 <= 0): save the final
-        # state so the artifact always exists.
-        torch.save(
-            {
-                "model_state": model.state_dict(),
-                "model_cfg": model_cfg,
-                "window": args.window,
-                "features": args.features,
-                "scaler_mean": scaler.mean_.tolist(),
-                "scaler_scale": scaler.scale_.tolist(),
-                "feature_cols": feature_cols,
-                "threshold": best["threshold"],
-                "val_metrics": {"val_f1": best["val_f1"]},
-                "best_epoch": best["epoch"],
-                "seed": args.seed,
-                "run_name": run_name,
-            },
-            run_ckpt_path,
-        )
-
-    ckpt = torch.load(run_ckpt_path, map_location=device, weights_only=False)
-    model.load_state_dict(ckpt["model_state"])
-    y_te, s_te, test_loss = evaluate_loader(model, loaders["test"], criterion, device)
-    thr = ckpt["threshold"]
-    pred = s_te >= thr
-    test_metrics = {
-        "threshold": thr,
-        "accuracy": accuracy_score(y_te, pred),
-        "precision": precision_score(y_te, pred, zero_division=0),
-        "recall": recall_score(y_te, pred, zero_division=0),
-        "f1": f1_score(y_te, pred, zero_division=0),
-        "roc_auc": roc_auc_score(y_te, s_te),
-        "pr_auc": average_precision_score(y_te, s_te),
-        "test_loss": test_loss,
-    }
-    tn, fp, fn, tp = confusion_matrix(y_te, pred, labels=[0, 1]).ravel()
-    test_metrics.update({"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)})
-
-    # Persist results next to the Workshop 1 baselines
-    results = {
-        "run_name": run_name,
-        "model_cfg": model_cfg,
-        "window": args.window,
-        "features": args.features,
-        "epochs_run": len(history),
-        "best_epoch": best["epoch"],
-        "best_val_f1": best["val_f1"],
-        "seed": args.seed,
-        "batch_size": args.batch_size,
-        "lr": args.lr,
-        "weight_decay": args.weight_decay,
-        "dropout": args.dropout,
-        "pos_weight": float(pos_w.cpu()),
-        "test_metrics": test_metrics,
-        "history": history,
-    }
-    out_json = RUNS_DIR / f"train_summary_{run_name}.json"
-    with open(out_json, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print("-" * 72)
-    print(f"BEST epoch {best['epoch']} | val F1 {best['val_f1']:.3f} | "
-          f"threshold {thr:.3f}")
-    print(f"TEST  accuracy {test_metrics['accuracy']:.3f} | "
-          f"precision {test_metrics['precision']:.3f} | "
-          f"recall {test_metrics['recall']:.3f} | F1 {test_metrics['f1']:.3f} | "
-          f"ROC-AUC {test_metrics['roc_auc']:.3f} | PR-AUC {test_metrics['pr_auc']:.3f}")
-    print(f"confusion [[TN FP] [FN TP]] = [[{tn} {fp}] [{fn} {tp}]]")
-    print(f"checkpoint -> {run_ckpt_path}"
-          + (" (promoted to model_best.pt)" if promoted else
-             f" (model_best.pt kept: better validation F1 from another run)"))
-    print(f"log csv    -> {log_path}")
-    print(f"summary    -> {out_json}")
-    print(f"tensorboard -> {TB_DIR / run_name}  (tensorboard --logdir runs/tb)")
-    return results
+    for t in sel["table"]:
+        print(f"{t['config']:>14}: best val {t['best_val_mean']:6.1f} +- {t['best_val_std']:5.1f} | "
+              f"final val {t['final_val_mean']:6.1f} +- {t['final_val_std']:5.1f} | "
+              f"runs reaching 475: {t['runs_reaching_475']}/3")
+    print(f"\nBest configuration: {sel['best_config']} -> checkpoints/agent_best.pt "
+          f"(seed {sel['best_run']['seed']}, val {sel['best_run']['best_val_return']:.1f})")
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
+def main() -> None:
+    """Command-line entry point."""
+    torch.set_num_threads(1)  # small MLP: one thread is faster and more reproducible
+    parser = argparse.ArgumentParser(description="Train the DQN agent")
+    parser.add_argument("--sweep", action="store_true", help="run every configuration x seed")
+    parser.add_argument("--configs", nargs="*", default=None, help="subset of configs for --sweep")
+    parser.add_argument("--config", default="reference", help="single run: configuration name")
+    parser.add_argument("--seed", type=int, default=42, help="single run: seed")
+    parser.add_argument("--episodes", type=int, default=None, help="override episodes per run")
+    parser.add_argument("--select-only", action="store_true",
+                        help="only re-run the selection from the saved run summaries")
+    args = parser.parse_args()
 
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
-    p = argparse.ArgumentParser(description="Train the CartPole failure predictor")
-    p.add_argument("--epochs", type=int, default=40, help="max epochs")
-    p.add_argument("--patience", type=int, default=8,
-                   help="early-stopping patience on val F1 (0 = disabled)")
-    p.add_argument("--batch-size", type=int, default=256)
-    p.add_argument("--lr", type=float, default=1e-3, help="max learning rate")
-    p.add_argument("--weight-decay", type=float, default=1e-4)
-    p.add_argument("--dropout", type=float, default=0.2)
-    p.add_argument("--hidden", type=int, default=64, help="RNN hidden units")
-    p.add_argument("--layers", type=int, default=2, help="stacked RNN layers")
-    p.add_argument("--cell", choices=["lstm", "gru"], default="lstm")
-    p.add_argument("--bidirectional", action="store_true")
-    p.add_argument("--window", type=int, default=16, help="past steps per sample")
-    p.add_argument("--features", choices=[MODE_RAW, MODE_ENGINEERED],
-                   default=MODE_RAW, help="per-step features")
-    p.add_argument("--grad-clip", type=float, default=1.0)
-    p.add_argument("--seed", type=int, default=SEED)
-    p.add_argument("--augment", action="store_true",
-                   help="append noise-augmented copies of the TRAIN rows only")
-    return p.parse_args()
+    if args.select_only:
+        finalize_sweep(args.configs)
+        return
+    if args.sweep:
+        run_sweep(args.configs, args.episodes)
+        return
+    base = load_json(CONFIG_FILE)
+    match = [c for c in base["configs"] if c["name"] == args.config]
+    if not match:
+        raise SystemExit(f"Unknown config '{args.config}'. Options: {[c['name'] for c in base['configs']]}")
+    cfg = DQNConfig.from_dict({**base["defaults"], **match[0]})
+    if args.episodes:
+        cfg.episodes = args.episodes
+    print(train_run(cfg, args.seed))
 
 
 if __name__ == "__main__":
-    train(parse_args())
+    main()
