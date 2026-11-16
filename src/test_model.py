@@ -29,7 +29,7 @@ from model import build_model
 from sequences import compute_features, window_episodes
 from train_lstm import set_global_seed
 
-CKPT_PATH = ROOT_DIR / "checkpoints" / "model_best.pt"
+CKPT_PATH = ROOT_DIR / "checkpoints" / "workshop2" / "model_best.pt"
 
 
 def predict_examples(

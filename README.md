@@ -131,16 +131,11 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── workshop3_colab.ipynb    # W3: step-by-step Colab runner
 │   └── workshop4_colab.ipynb    # W4: step-by-step Colab runner
 ├── checkpoints/
-│   ├── model_best.pt            # W2: best LSTM model (highest validation F1)
-│   ├── agent_best.pt            # W3: best DQN agent (highest validation return)
-│   ├── workshop3_sweep/         # W3: best checkpoint per config × seed
-│   ├── ae_best.pt               # W4: best AE checkpoint
-│   ├── vae_best.pt              # W4: best VAE checkpoint (β=4, z=2, all regimes)
-│   ├── ae_normal_best.pt        # W4: best AE (normal regime only)
-│   ├── vae_normal_best.pt       # W4: best VAE (normal regime only)
-│   ├── mlp_control.pt           # W4: supervised MLP control probe
-│   ├── w2_lstm_best.pt          # W4: copy of W2 LSTM for W4 anomaly comparison
-│   └── workshop4/               # W4: per-run checkpoints (AE/VAE/DAE sweep)
+│   ├── workshop2/               # W2: model_best.pt, model_w2_lstm_*.pt
+│   ├── workshop3/               # W3: agent_best.pt, sweep/
+│   └── workshop4/               # W4: ae_best.pt, vae_best.pt, ae_normal_best.pt,
+│                                #     vae_normal_best.pt, mlp_control.pt,
+│                                #     w2_lstm_best.pt + per-run sweep checkpoints
 ├── runs/
 │   ├── workshop1/               # W1: baseline_results_*.csv/.json
 │   ├── workshop2/               # W2: train_log_*.csv, train_summary_*.json, eval_*.json, tb/

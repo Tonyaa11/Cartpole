@@ -49,7 +49,7 @@ from train_lstm import evaluate_loader, make_loaders, set_global_seed
 
 FIG_DIR = ROOT_DIR / "report" / "figures"
 RUNS_DIR = ROOT_DIR / "runs" / "workshop2"
-CKPT_PATH = ROOT_DIR / "checkpoints" / "model_best.pt"
+CKPT_PATH = ROOT_DIR / "checkpoints" / "workshop2" / "model_best.pt"
 W1_RESULTS = ROOT_DIR / "runs" / "workshop1" / "baseline_results_base.csv"
 
 PALETTE = ["#4C72B0", "#C44E52"]

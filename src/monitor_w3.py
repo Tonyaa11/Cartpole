@@ -70,7 +70,7 @@ from w2_bridge import W2DangerModel  # noqa: E402  (Workshop 3 -> Workshop 2)
 import autoencoder as ae  # noqa: E402  (Workshop 4)
 from features import build_features  # noqa: E402
 from w4_common import (  # noqa: E402
-    CKPT_DIR,
+    CKPT_DIR,          # workshop4 checkpoints
     COLORS,
     RUNS_DIR,
     detection_metrics,
@@ -275,7 +275,8 @@ def main() -> None:
     detectors = {DETECTORS[0]: VAEMonitor(), DETECTORS[1]: W1DangerModel(), DETECTORS[2]: W2DangerModel()}
     thresholds = {d: float(m.threshold) for d, m in detectors.items()}
     # make_baselines() without failure models -> random, alternating, angle rule, PD rule
-    policies = make_baselines() + [_DQNPolicy(DQNAgent.load(CKPT_DIR / "agent_best.pt"))]
+    _w3_ckpt = CKPT_DIR.parent / "workshop3" / "agent_best.pt"
+    policies = make_baselines() + [_DQNPolicy(DQNAgent.load(_w3_ckpt))]
 
     df = collect(policies, detectors)
     summary = summarise(df, thresholds)

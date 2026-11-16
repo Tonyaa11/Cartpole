@@ -70,7 +70,7 @@ from sequences import (
 )
 
 RUNS_DIR = ROOT_DIR / "runs" / "workshop2"
-CKPT_DIR = ROOT_DIR / "checkpoints"
+CKPT_DIR = ROOT_DIR / "checkpoints" / "workshop2"
 TB_DIR = RUNS_DIR / "tb"
 
 

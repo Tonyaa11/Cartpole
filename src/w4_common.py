@@ -66,12 +66,12 @@ from features import build_features
 # Paths
 # --------------------------------------------------------------------------- #
 RUNS_DIR = ROOT_DIR / "runs" / "workshop4"
-CKPT_DIR = ROOT_DIR / "checkpoints"
-CKPT_RUNS_DIR = CKPT_DIR / "workshop4"
+CKPT_DIR = ROOT_DIR / "checkpoints" / "workshop4"
+CKPT_RUNS_DIR = CKPT_DIR
 REPORT_DIR = ROOT_DIR / "report" / "workshop4"
 FIG_DIR = REPORT_DIR / "figures"
 GEN_DIR = REPORT_DIR / "generated"
-W1_RESULTS_CSV = ROOT_DIR / "runs" / "baseline_results_base.csv"
+W1_RESULTS_CSV = ROOT_DIR / "runs" / "workshop1" / "baseline_results_base.csv"
 W2_CKPT = CKPT_DIR / "w2_lstm_best.pt"  # Workshop 2 model (2-layer LSTM, window 16)
 
 PARTITIONS = ("train", "val", "test")
