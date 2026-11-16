@@ -16,10 +16,10 @@ its best run to ``checkpoints/agent_best.pt``. The test set is never touched her
 
 Usage
 -----
-    python workshop3/src/train.py --sweep                       # full sweep (5 configs x 3 seeds)
-    python workshop3/src/train.py --config reference --seed 42  # a single run
-    python workshop3/src/train.py --sweep --episodes 50         # quick smoke test
-    python workshop3/src/train.py --select-only                 # redo the selection from the logs
+    python src/train_rl.py --sweep                       # full sweep (5 configs x 3 seeds)
+    python src/train_rl.py --config reference --seed 42  # a single run
+    python src/train_rl.py --sweep --episodes 50         # quick smoke test
+    python src/train_rl.py --select-only                 # redo the selection from the logs
 """
 
 from __future__ import annotations

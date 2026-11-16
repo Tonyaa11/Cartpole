@@ -23,7 +23,7 @@ Outputs: ``runs/workshop3/test_results.json`` and ``runs/workshop3/trajectories.
 
 Usage
 -----
-    python workshop3/src/evaluate.py
+    python src/evaluate_rl.py
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ import numpy as np
 import torch
 
 from agent import DQNAgent
-from baselines import Policy, make_baselines
+from baselines_rl import Policy, make_baselines
 from common import CKPT_DIR, ROOT_DIR, RUNS_DIR, TEST_SEEDS, load_json, save_json
 from env import MAX_STEPS, make_env
 from w1_bridge import W1DangerModel

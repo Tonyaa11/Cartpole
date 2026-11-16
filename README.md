@@ -98,46 +98,45 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── processed/
 │   └── splits.json
 ├── src/
-│   ├── dataset.py           # W1: loading, split, scaling, augmentation
-│   ├── features.py          # W1: 16 engineered features
-│   ├── baselines.py         # W1: the three supervised baselines
-│   ├── make_figures.py      # W1: report figures
-│   ├── model.py             # W2: LSTM/GRU architecture
-│   ├── sequences.py         # W2: past-only sliding windows
-│   ├── train.py             # W2: training loop + TensorBoard/CSV logs
-│   ├── evaluate.py          # W2: test evaluation + W1 comparison table
-│   ├── test_model.py        # W2: load checkpoint and run inference
-│   └── make_figures_w2.py   # W2: report figures
+│   ├── dataset.py               # W1: loading, split, scaling, augmentation
+│   ├── features.py              # W1: 16 engineered features
+│   ├── baselines.py             # W1: supervised baselines (LR, RF, GBT)
+│   ├── make_figures.py          # W1: report figures
+│   ├── model.py                 # W2: LSTM/GRU architecture
+│   ├── sequences.py             # W2: past-only sliding windows
+│   ├── train.py                 # W2: training loop + TensorBoard/CSV logs
+│   ├── evaluate.py              # W2: test evaluation + W1 comparison table
+│   ├── test_model.py            # W2: load checkpoint and run inference
+│   ├── make_figures_w2.py       # W2: report figures
+│   ├── env.py                   # W3: custom Gymnasium environment
+│   ├── agent.py                 # W3: DQN agent
+│   ├── baselines_rl.py          # W3: RL policy baselines (random, PD, W1-guided)
+│   ├── train_rl.py              # W3: DQN training loop + sweep
+│   ├── evaluate_rl.py           # W3: test evaluation
+│   ├── common.py                # W3: shared paths and seeds
+│   ├── w1_bridge.py             # W3: W1 classifier as controller
+│   └── make_report_assets_w3.py # W3: figures and LaTeX tables
 ├── notebooks/
-│   └── eda.ipynb
+│   ├── eda.ipynb                # W1: exploratory data analysis
+│   └── workshop3_colab.ipynb   # W3: step-by-step Colab runner
 ├── checkpoints/
-│   ├── model_best.pt        # W2: best model (highest validation F1)
-│   ├── agent_best.pt        # W3: best DQN agent (highest validation return)
-│   └── workshop3_sweep/     # W3: best checkpoint per config × seed
+│   ├── model_best.pt            # W2: best model (highest validation F1)
+│   ├── agent_best.pt            # W3: best DQN agent (highest validation return)
+│   └── workshop3_sweep/         # W3: best checkpoint per config × seed
 ├── runs/
-│   ├── baseline_results_*.csv       # W1 results
-│   ├── train_log_*.csv              # W2 per-epoch logs
-│   ├── train_summary_*.json         # W2 run summary
-│   ├── eval_*.json                  # W2 test metrics
-│   ├── comparison_*.csv             # W2 vs W1 table
-│   ├── tb/                          # W2 TensorBoard event files
-│   └── workshop3/                   # W3 TensorBoard logs, sweep & test results
+│   ├── baseline_results_*.csv   # W1 results
+│   ├── train_log_*.csv          # W2 per-epoch logs
+│   ├── train_summary_*.json     # W2 run summary
+│   ├── eval_*.json              # W2 test metrics
+│   ├── comparison_*.csv         # W2 vs W1 table
+│   ├── tb/                      # W2 TensorBoard event files
+│   └── workshop3/               # W3 TensorBoard logs, sweep & test results
 ├── workshop3/
-│   ├── configs/sweep.json           # W3: 6 hyperparameter configurations
-│   ├── src/
-│   │   ├── env.py                   # W3: custom Gymnasium environment
-│   │   ├── agent.py                 # W3: DQN agent
-│   │   ├── baselines.py             # W3: 5 baseline policies
-│   │   ├── train.py                 # W3: training loop + sweep
-│   │   ├── evaluate.py              # W3: test evaluation
-│   │   ├── w1_bridge.py             # W3: W1 classifier as controller
-│   │   └── common.py                # W3: shared paths and seeds
-│   ├── notebooks/workshop3_colab.ipynb
-│   ├── report/
-│   │   ├── main.tex                 # W3 report (Overleaf source)
-│   │   ├── figures/                 # generated figures
-│   │   └── generated/               # generated LaTeX tables and macros
-│   └── requirements.txt
+│   ├── configs/sweep.json       # W3: 6 hyperparameter configurations
+│   └── report/
+│       ├── main.tex             # W3 report (Overleaf source)
+│       ├── figures/             # generated figures
+│       └── generated/           # generated LaTeX tables and macros
 ├── report/
 │   ├── main.tex             # W1 report (Overleaf source)
 │   ├── main_w2.tex          # W2 report (Overleaf source)
@@ -315,16 +314,16 @@ Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schema
 
 ```bash
 # 1. Validate the custom Gymnasium environment
-python workshop3/src/env.py
+python src/env.py
 
 # 2. Run the full hyperparameter sweep (6 configs × 3 seeds, ~20–40 min)
-python workshop3/src/train.py --sweep
+python src/train_rl.py --sweep
 
 # 3. Evaluate the best agent and all baselines on 100 test states
-python workshop3/src/evaluate.py
+python src/evaluate_rl.py
 
 # 4. Generate figures and LaTeX tables for the report
-python workshop3/src/make_report_assets.py
+python src/make_report_assets_w3.py
 
 # 5. Watch TensorBoard training curves
 tensorboard --logdir runs/workshop3 --port 6006

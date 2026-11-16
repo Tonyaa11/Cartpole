@@ -18,16 +18,16 @@ Deliverables required by the workshop and where they are:
 
 | Required | Location |
 |---|---|
-| `src/env.py` | `workshop3/src/env.py` |
-| `src/agent.py` | `workshop3/src/agent.py` |
-| `src/baselines.py` | `workshop3/src/baselines.py` |
-| `src/train.py` | `workshop3/src/train.py` |
-| `src/evaluate.py` | `workshop3/src/evaluate.py` |
+| `src/env.py` | `src/env.py` |
+| `src/agent.py` | `src/agent.py` |
+| `src/baselines_rl.py` | `src/baselines_rl.py` (RL policies; W1 supervised baselines stay in `src/baselines.py`) |
+| `src/train_rl.py` | `src/train_rl.py` (DQN training; W2 LSTM training stays in `src/train.py`) |
+| `src/evaluate_rl.py` | `src/evaluate_rl.py` (DQN evaluation; W2 evaluation stays in `src/evaluate.py`) |
+| `src/common.py` | `src/common.py` |
+| `src/w1_bridge.py` | `src/w1_bridge.py` |
 | `checkpoints/agent_best.pt` | `checkpoints/agent_best.pt` |
 | `runs/workshop3/` | `runs/workshop3/` |
 | Report | `workshop3/report/main.tex` -> `group5_workshop3.pdf` |
-
-The Workshop 3 code lives in `workshop3/` because the repository root already contains the Workshop 1 files (for example `src/baselines.py`).
 
 ---
 
@@ -128,7 +128,7 @@ Run every command from the repository root.
 ### 5.1 Validating the Environment
 
 ```bash
-python workshop3/src/env.py
+python src/env.py
 ```
 
 This will:
@@ -143,7 +143,7 @@ This will:
 ### 5.2 Checking the Workshop 1 Classifier (optional)
 
 ```bash
-python workshop3/src/w1_bridge.py
+python src/w1_bridge.py
 ```
 
 Rebuilds the Workshop 1 Gradient Boosting model (same split, features, scaler and threshold) and verifies that the fast feature code used inside the control loop matches `src/features.py`.
@@ -153,7 +153,7 @@ Rebuilds the Workshop 1 Gradient Boosting model (same split, features, scaler an
 ### 5.3 Training a Single Configuration
 
 ```bash
-python workshop3/src/train.py --config reference --seed 42
+python src/train_rl.py --config reference --seed 42
 ```
 
 ---
@@ -161,7 +161,7 @@ python workshop3/src/train.py --config reference --seed 42
 ### 5.4 Running the Hyperparameter Sweep
 
 ```bash
-python workshop3/src/train.py --sweep
+python src/train_rl.py --sweep
 ```
 
 This will:
@@ -171,14 +171,14 @@ This will:
 * Select the best configuration on validation results only and copy its best run to `checkpoints/agent_best.pt`
 * Write `runs/workshop3/sweep_results.json`
 
-To redo only the selection from the saved logs: `python workshop3/src/train.py --select-only`.
+To redo only the selection from the saved logs: `python src/train_rl.py --select-only`.
 
 ---
 
 ### 5.5 Test Evaluation
 
 ```bash
-python workshop3/src/evaluate.py
+python src/evaluate_rl.py
 ```
 
 This will:
@@ -192,7 +192,7 @@ This will:
 ### 5.6 Figures and LaTeX Tables
 
 ```bash
-python workshop3/src/make_report_assets.py
+python src/make_report_assets_w3.py
 ```
 
 Writes the figures to `workshop3/report/figures/` and every number of the report to `workshop3/report/generated/`. Upload the whole `workshop3/report/` folder to Overleaf and compile `main.tex`.
