@@ -25,13 +25,12 @@
 \renewcommand{\textfraction}{0.1}
 \setcounter{dbltopnumber}{2}
 \newcommand{\figw}[4]{%
-  \IfFileExists{#2.png}{%
   \begin{figure*}[!t]
     \centering
     \includegraphics[width=#1]{#2.png}
     \caption{#3}
     \label{#4}
-  \end{figure*}}{}}
+  \end{figure*}}
 
 \begin{document}
 

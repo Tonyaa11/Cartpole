@@ -19,10 +19,7 @@
 % ---------------------------------------------------------------------------
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 \newcommand{\figph}[3][\columnwidth]{%
-  \IfFileExists{#3.png}{%
-    \includegraphics[width=#1]{#3.png}}{%
-    \fbox{\parbox[c][2.6cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{\centering\small
-    \textbf{Insert figure:} #2\\[2pt] \texttt{#3.png}}}}}
+  \includegraphics[width=#1]{#3.png}}
 \input{../runs/workshop3/generated/macros}
 
 \begin{document}
