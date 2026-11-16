@@ -82,8 +82,8 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 ```python
 !git clone https://github.com/Tonyaa11/Cartpole.git cartpole-ml
 %cd cartpole-ml
-!python src/dataset_info.py
-!python src/baselines.py
+!python src/w1/dataset_info.py
+!python src/w1/baselines.py
 ```
 
 ---
@@ -100,32 +100,37 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── processed/
 │   └── splits.json
 ├── src/
-│   ├── dataset.py               # W1: loading, split, scaling, augmentation
-│   ├── features.py              # W1: 16 engineered features
-│   ├── baselines.py             # W1+W3: ML supervised baselines + RL policy baselines
-│   ├── dataset_info.py          # W1: dataset summary and checksum
-│   ├── make_figures.py          # W1: report figures
-│   ├── model.py                 # W2: LSTM/GRU architecture
-│   ├── sequences.py             # W2: past-only sliding windows
-│   ├── train_lstm.py            # W2: LSTM training loop + TensorBoard/CSV logs
-│   ├── evaluate_lstm.py         # W2: LSTM test evaluation + W1 comparison table
-│   ├── test_model.py            # W2: load checkpoint and run inference
-│   ├── make_figures_w2.py       # W2: report figures
-│   ├── env.py                   # W3: custom Gymnasium environment
-│   ├── agent.py                 # W3: DQN agent
-│   ├── train.py                 # W3: DQN training loop + sweep
-│   ├── evaluate.py              # W3: DQN test evaluation
-│   ├── common.py                # W3: shared paths and seeds
-│   ├── w1_bridge.py             # W3: W1 classifier as controller
-│   ├── make_report_assets_w3.py # W3: figures and LaTeX tables
-│   ├── autoencoder.py           # W4: AE / VAE / DAE architectures
-│   ├── train_ae.py              # W4: AE/VAE training loop
-│   ├── evaluate_ae.py           # W4: reconstruction + anomaly detection evaluation
-│   ├── analyze_latent.py        # W4: t-SNE, UMAP, feature correlation
-│   ├── monitor_w3.py            # W4: DQN agent monitoring via latent space
-│   ├── w2_encoder.py            # W4: bridge to W2 LSTM encoder
-│   ├── w4_common.py             # W4: shared paths and helpers
-│   └── make_report_w4.py        # W4: figures and LaTeX tables
+│   ├── w1/
+│   │   ├── dataset.py           # W1: loading, split, scaling, augmentation
+│   │   ├── features.py          # W1: 16 engineered features
+│   │   ├── baselines.py         # W1+W3: ML supervised baselines + RL policy baselines
+│   │   ├── dataset_info.py      # W1: dataset summary and checksum
+│   │   └── make_figures.py      # W1: report figures
+│   ├── w2/
+│   │   ├── model.py             # W2: LSTM/GRU architecture
+│   │   ├── sequences.py         # W2: past-only sliding windows
+│   │   ├── train_lstm.py        # W2: LSTM training loop + TensorBoard/CSV logs
+│   │   ├── evaluate_lstm.py     # W2: LSTM test evaluation + W1 comparison table
+│   │   ├── test_model.py        # W2: load checkpoint and run inference
+│   │   └── make_figures_w2.py   # W2: report figures
+│   ├── w3/
+│   │   ├── env.py               # W3: custom Gymnasium environment
+│   │   ├── agent.py             # W3: DQN agent
+│   │   ├── train.py             # W3: DQN training loop + sweep
+│   │   ├── evaluate.py          # W3: DQN test evaluation
+│   │   ├── common.py            # W3: shared paths and seeds
+│   │   ├── w1_bridge.py         # W3: W1 classifier as controller
+│   │   └── make_report_assets_w3.py  # W3: figures and LaTeX tables
+│   └── w4/
+│       ├── autoencoder.py       # W4: AE / VAE / DAE architectures
+│       ├── train_ae.py          # W4: AE/VAE training loop
+│       ├── evaluate_ae.py       # W4: reconstruction + anomaly detection evaluation
+│       ├── analyze_latent.py    # W4: t-SNE, UMAP, feature correlation
+│       ├── monitor_w3.py        # W4: DQN agent monitoring via latent space
+│       ├── w2_encoder.py        # W4: bridge to W2 LSTM encoder
+│       ├── w2_bridge.py         # W4: bridge to W2 LSTM danger model
+│       ├── w4_common.py         # W4: shared paths and helpers
+│       └── make_report_w4.py    # W4: figures and LaTeX tables
 ├── notebooks/
 │   ├── eda.ipynb                # W1: exploratory data analysis
 │   ├── workshop3_colab.ipynb    # W3: step-by-step Colab runner
@@ -160,7 +165,7 @@ Run every command from the repository root.
 ### 5.1 Verifying the Dataset
 
 ```bash
-python dataset_info.py
+python src/w1/dataset_info.py
 ```
 
 This will:
@@ -174,7 +179,7 @@ This will:
 ### 5.2 Creating the Train / Validation / Test Split
 
 ```bash
-python src/dataset.py
+python src/w1/dataset.py
 ```
 
 This will:
@@ -189,7 +194,7 @@ The file is already included. Never re-split randomly: every script loads this f
 ### 5.3 Training and Evaluating the Baselines
 
 ```bash
-python src/baselines.py
+python src/w1/baselines.py
 ```
 
 This will:
@@ -205,8 +210,8 @@ This will:
 ### 5.4 Ablation Experiments
 
 ```bash
-python src/baselines.py --raw-only   # only the 5 raw columns (no feature engineering)
-python src/baselines.py --augment    # Gaussian-noise augmentation, training set only
+python src/w1/baselines.py --raw-only   # only the 5 raw columns (no feature engineering)
+python src/w1/baselines.py --augment    # Gaussian-noise augmentation, training set only
 ```
 
 Results are stored in `runs/baseline_results_raw.*` and `runs/baseline_results_augmented.*`.
@@ -216,7 +221,7 @@ Results are stored in `runs/baseline_results_raw.*` and `runs/baseline_results_a
 ### 5.5 Generating the Report Figures
 
 ```bash
-python src/make_figures.py
+python src/w1/make_figures.py
 ```
 
 This will:
@@ -244,8 +249,8 @@ All commands below run from the repository root and reuse the **same episode spl
 ### 6.1 Model Architecture Check
 
 ```bash
-python src/model.py                 # forward-pass smoke test (LSTM + GRU)
-python src/model.py --cell gru --bidirectional --input-size 16
+python src/w2/model.py                 # forward-pass smoke test (LSTM + GRU)
+python src/w2/model.py --cell gru --bidirectional --input-size 16
 ```
 
 Prints the output shape and the parameter count of the architecture (default: 2-layer LSTM, 64 hidden units, MLP head → 53,569 parameters).
@@ -255,12 +260,12 @@ Prints the output shape and the parameter count of the architecture (default: 2-
 ### 6.2 Training
 
 ```bash
-python src/train_lstm.py                                  # default: LSTM, window 16, raw features
-python src/train_lstm.py --cell gru --window 16           # GRU variant
-python src/train_lstm.py --window 32                      # longer history
-python src/train_lstm.py --hidden 128                     # wider model
-python src/train_lstm.py --features engineered            # 16 engineered features per step
-python src/train_lstm.py --augment                        # noise augmentation (train only)
+python src/w2/train_lstm.py                                  # default: LSTM, window 16, raw features
+python src/w2/train_lstm.py --cell gru --window 16           # GRU variant
+python src/w2/train_lstm.py --window 32                      # longer history
+python src/w2/train_lstm.py --hidden 128                     # wider model
+python src/w2/train_lstm.py --features engineered            # 16 engineered features per step
+python src/w2/train_lstm.py --augment                        # noise augmentation (train only)
 ```
 
 This will:
@@ -283,7 +288,7 @@ tensorboard --logdir runs/tb
 ### 6.3 Test-Set Evaluation and Comparison with Workshop 1
 
 ```bash
-python src/evaluate_lstm.py
+python src/w2/evaluate_lstm.py
 ```
 
 This will:
@@ -298,8 +303,8 @@ This will:
 ### 6.4 Verifying the Saved Checkpoint
 
 ```bash
-python src/test_model.py --n 10 --split test   # 10 example predictions on unseen data
-python src/test_model.py --interactive         # type your own state and get a prediction
+python src/w2/test_model.py --n 10 --split test   # 10 example predictions on unseen data
+python src/w2/test_model.py --interactive         # type your own state and get a prediction
 ```
 
 Loads `checkpoints/model_best.pt` and runs inference with the scaler stored inside the checkpoint, proving the artifact is self-contained.
@@ -309,7 +314,7 @@ Loads `checkpoints/model_best.pt` and runs inference with the scaler stored insi
 ### 6.5 Report Figures (Workshop 2)
 
 ```bash
-python src/make_figures_w2.py
+python src/w2/make_figures_w2.py
 ```
 
 Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schematic), `fig2-curves.png` (learning curves), `fig2-confusion.png`, `fig2-roc-pr.png` (deep model vs. baselines) and `fig2-comparison.png`. They are picked up automatically by `report/main_w2.tex` on Overleaf.
@@ -320,16 +325,16 @@ Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schema
 
 ```bash
 # 1. Validate the custom Gymnasium environment
-python src/env.py
+python src/w3/env.py
 
 # 2. Run the full hyperparameter sweep (6 configs × 3 seeds, ~20–40 min)
-python src/train.py --sweep
+python src/w3/train.py --sweep
 
 # 3. Evaluate the best agent and all baselines on 100 test states
-python src/evaluate.py
+python src/w3/evaluate.py
 
 # 4. Generate figures and LaTeX tables for the report
-python src/make_report_assets_w3.py
+python src/w3/make_report_assets_w3.py
 
 # 5. Watch TensorBoard training curves
 tensorboard --logdir runs/workshop3 --port 6006
@@ -345,19 +350,19 @@ All commands run from the repository root and reuse the same episode split (`dat
 
 ```bash
 # 1. Train all AE/VAE/DAE configurations (β sweep, z-dim sweep, ~10 min total)
-python src/train_ae.py --sweep
+python src/w4/train_ae.py --sweep
 
 # 2. Evaluate reconstruction quality and anomaly detection
-python src/evaluate_ae.py
+python src/w4/evaluate_ae.py
 
 # 3. Latent-space analysis (t-SNE, UMAP, feature correlation)
-python src/analyze_latent.py
+python src/w4/analyze_latent.py
 
 # 4. Monitor W3 DQN agent through the VAE latent space
-python src/monitor_w3.py
+python src/w4/monitor_w3.py
 
 # 5. Generate figures and LaTeX tables
-python src/make_report_w4.py
+python src/w4/make_report_w4.py
 
 # 6. Watch TensorBoard training curves
 tensorboard --logdir runs/workshop4 --port 6007
@@ -396,13 +401,13 @@ Google Colab: open `notebooks/workshop4_colab.ipynb` and run all cells.
 There is no TensorBoard in Workshop 1 (it is used in Workshops 2 and 3). Workshop 1 results are read from:
 
 ```text
-runs/
+runs/workshop1/
   ├── baseline_results_base.csv        # main results (engineered features)
   ├── baseline_results_raw.csv         # ablation: raw features
   └── baseline_results_augmented.csv   # ablation: noise augmentation
 ```
 
-Figures are saved by `src/make_figures.py` in `report/figures/`. Each CSV file has one row per model and evaluation setting (`test @ 0.5` and `test @ val-threshold`) with accuracy, precision, recall, F1, ROC-AUC, PR-AUC and the confusion-matrix counts (`tn, fp, fn, tp`). The notebook `notebooks/eda.ipynb` shows the full exploratory analysis.
+Figures are saved by `src/w1/make_figures.py` in `report/figures/`. Each CSV file has one row per model and evaluation setting (`test @ 0.5` and `test @ val-threshold`) with accuracy, precision, recall, F1, ROC-AUC, PR-AUC and the confusion-matrix counts (`tn, fp, fn, tp`). The notebook `notebooks/eda.ipynb` shows the full exploratory analysis.
 
 ---
 
@@ -418,9 +423,9 @@ All experiments are reproducible due to:
 To reproduce the Workshop 1 results:
 
 1. Set up the environment
-2. Run `python dataset_info.py` and check the checksum
-3. Run `python src/baselines.py` (and the two ablations)
-4. Compare with `runs/baseline_results_*.csv`
+2. Run `python src/w1/dataset_info.py` and check the checksum
+3. Run `python src/w1/baselines.py` (and the two ablations)
+4. Compare with `runs/workshop1/baseline_results_*.csv`
 
 Workshop 1 main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
 
@@ -432,10 +437,10 @@ Workshop 1 main result on the test set (60 episodes, threshold chosen on validat
 
 To reproduce the Workshop 2 results:
 
-1. `python src/train_lstm.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
-2. `python src/evaluate_lstm.py` (test metrics + comparison table)
-3. `python src/make_figures_w2.py` (report figures)
-4. Compare with `runs/eval_*.json` and `runs/comparison_*.csv`
+1. `python src/w2/train_lstm.py` (rebuilds the windows from the same split, trains and saves `checkpoints/workshop2/model_best.pt`)
+2. `python src/w2/evaluate_lstm.py` (test metrics + comparison table)
+3. `python src/w2/make_figures_w2.py` (report figures)
+4. Compare with `runs/workshop2/eval_*.json` and `runs/workshop2/comparison_*.csv`
 
 **Workshop 1 baselines vs. Workshop 2 deep model** (test set, threshold chosen on validation, seed 42):
 
