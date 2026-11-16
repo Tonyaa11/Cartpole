@@ -1,0 +1,71 @@
+\relax 
+\citation{sutton2018}
+\citation{mnih2015}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}MDP Formulation}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Problem Statement}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}State Space}{1}{}\protected@file@percent }
+\citation{barto1983}
+\citation{barto1983}
+\citation{ng1999}
+\citation{towers2024}
+\citation{mnih2015}
+\citation{watkins1992}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces MDP SPECIFICATION}}{2}{}\protected@file@percent }
+\newlabel{tab:mdp}{{I}{2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Action Set}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Transition Dynamics}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Reward Function}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Frames produced by \texttt  {render()} along a test episode of the selected agent (red marks: failure limits $|x| = 2.4$\nobreakspace  {}m).}}{2}{}\protected@file@percent }
+\newlabel{fig:render}{{1}{2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-F}}Episode Termination}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Environment Implementation and Validation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Implementation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Validation}{2}{}\protected@file@percent }
+\citation{paszke2019}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Random-policy diagnostics on 100 episodes: (a) episode-length distribution, (b) frequency of each action.}}{3}{}\protected@file@percent }
+\newlabel{fig:random}{{2}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Agent: Deep Q-Network}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Algorithm and Architecture}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Training Loop}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Validation Loop and Checkpointing}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces REFERENCE HYPERPARAMETERS}}{3}{}\protected@file@percent }
+\newlabel{tab:hparams}{{II}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Hyperparameter Search}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Protocol}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Results}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces HYPERPARAMETER SEARCH: VALIDATION RESULTS (MEAN $\pm $ STD OVER 3 SEEDS)}}{4}{}\protected@file@percent }
+\newlabel{tab:sweep}{{III}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Validation return (10 episodes, greedy policy) as a function of environment steps for every configuration and seed. Dashed line: 475, the CartPole-v1 solving threshold.}}{4}{}\protected@file@percent }
+\newlabel{fig:curves}{{3}{4}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Test Evaluation and Comparison}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Protocol and Baselines}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces (a) Exploration rate per episode for the two decay factors. (b) Reference configuration: share of validation episodes that end by cart position or by pole angle during training (mean of three seeds).}}{5}{}\protected@file@percent }
+\newlabel{fig:explore}{{4}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Results}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Mean test return ($\pm $ one standard deviation) of every policy in the nominal and noisy test conditions.}}{5}{}\protected@file@percent }
+\newlabel{fig:test}{{5}{5}}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces TEST RESULTS ON 100 HELD-OUT EPISODES (RETURN = STEPS SURVIVED, MAXIMUM 500)}}{6}{}\protected@file@percent }
+\newlabel{tab:test}{{IV}{6}}
+\@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces SELECTED CONFIGURATION: TEST RESULTS PER TRAINING SEED}}{6}{}\protected@file@percent }
+\newlabel{tab:seeds}{{V}{6}}
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces SUPERVISED MODELS AS PREDICTORS (W1/W2 TEST SET) AND AS LOOK-AHEAD POLICIES (W3 TEST)}}{6}{}\protected@file@percent }
+\newlabel{tab:w12}{{VI}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Comparison with Workshops 1 and 2}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Sample Trajectories}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Sample Efficiency}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Discussion}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Four test episodes of the selected agent: pole angle, cart position, action taken at each step and cumulative task return.}}{7}{}\protected@file@percent }
+\newlabel{fig:traj}{{6}{7}}
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusions}{7}{}\protected@file@percent }
+\bibcite{sutton2018}{1}
+\bibcite{mnih2015}{2}
+\bibcite{watkins1992}{3}
+\bibcite{barto1983}{4}
+\bibcite{ng1999}{5}
+\bibcite{towers2024}{6}
+\bibcite{paszke2019}{7}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Sample efficiency: smoothed validation return of the selected configuration (mean and min--max of three seeds) versus environment steps, with the test return of the baselines (PD rule and W2 LSTM share the line at 500) and the number of environment steps stored in the dataset of Workshops\nobreakspace  {}1 and\nobreakspace  {}2.}}{8}{}\protected@file@percent }
+\newlabel{fig:sample}{{7}{8}}
+\@writefile{toc}{\contentsline {section}{References}{8}{}\protected@file@percent }
+\gdef \@abspage@last{8}
