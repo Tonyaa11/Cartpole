@@ -130,17 +130,11 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── comparison_*.csv         # W2 vs W1 table
 │   ├── tb/                      # W2 TensorBoard event files
 │   └── workshop3/               # W3 TensorBoard logs, sweep & test results
-├── workshop3/
-│   ├── configs/sweep.json       # W3: 6 hyperparameter configurations
-│   └── report/
-│       ├── main.tex             # W3 report (Overleaf source)
-│       ├── figures/             # generated figures
-│       └── generated/           # generated LaTeX tables and macros
-├── report/
-│   ├── main.tex             # W1 report (Overleaf source)
-│   ├── main_w2.tex          # W2 report (Overleaf source)
-│   └── figures/
+├── configs/
+│   └── sweep.json               # W3: 6 hyperparameter configurations
 ├── group5_workshop1.pdf
+├── group5_workshop2.pdf
+├── group5_workshop3.pdf
 └── README.md
 ```
 
@@ -328,7 +322,7 @@ python src/make_report_assets_w3.py
 tensorboard --logdir runs/workshop3 --port 6006
 ```
 
-Google Colab: open `workshop3/notebooks/workshop3_colab.ipynb` and run all cells.
+Google Colab: open `notebooks/workshop3_colab.ipynb` and run all cells.
 
 ---
 
@@ -391,7 +385,7 @@ To reproduce the Workshop 2 results:
 
 ## 9. Workshop 3: Reinforcement Learning Agent (DQN)
 
-See `workshop3/README.md` for the full run instructions.
+
 
 ### 9.1 MDP Definition
 

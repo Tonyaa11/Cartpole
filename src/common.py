@@ -20,13 +20,10 @@ import numpy as np
 # Paths
 # --------------------------------------------------------------------------- #
 ROOT_DIR = Path(__file__).resolve().parent.parent     # repository root
-W3_DIR = ROOT_DIR / "workshop3"                       # workshop3/ (configs, report)
 RUNS_DIR = ROOT_DIR / "runs" / "workshop3"            # logs (required location)
 CKPT_DIR = ROOT_DIR / "checkpoints"                   # checkpoints/agent_best.pt
 SWEEP_CKPT_DIR = CKPT_DIR / "workshop3_sweep"         # per-run best checkpoints
-CONFIG_FILE = W3_DIR / "configs" / "sweep.json"
-FIG_DIR = W3_DIR / "report" / "figures"
-RESULTS_TEX = W3_DIR / "report" / "results.tex"       # numbers used by main.tex
+CONFIG_FILE = ROOT_DIR / "configs" / "sweep.json"
 
 # --------------------------------------------------------------------------- #
 # Seeds: three disjoint sets of initial states
