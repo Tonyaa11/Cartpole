@@ -8,14 +8,16 @@
 \usepackage{url}
 \usepackage{booktabs}
 \usepackage{multirow}
+% Local: figures in runs/workshop4/figures/  Overleaf: figures/ (see scripts/pack_report.py)
+\graphicspath{{../runs/workshop4/figures/}{figures/}}
 
 % ---------------------------------------------------------------------------
 % Every number quoted in the text comes from generated/results.tex, which is
-% written by  python src/make_report_w4.py  from the files in runs/workshop4/.
+% written by  python src/w4/make_report_w4.py  from the files in runs/workshop4/.
 % Re-running the experiments therefore updates the report automatically.
-% \figw4{width}{file}{caption}{label}: full-width figure, only if the PNG exists.
+% \figw{width}{file}{caption}{label}: full-width figure, only if the PNG exists.
 % ---------------------------------------------------------------------------
-\input{generated/results.tex}
+\input{../runs/workshop4/generated/results.tex}
 % Allow up to two full-width figures at the top of a page (many figures in this report)
 \renewcommand{\dbltopfraction}{0.9}
 \renewcommand{\dblfloatpagefraction}{0.8}
@@ -23,10 +25,10 @@
 \renewcommand{\textfraction}{0.1}
 \setcounter{dbltopnumber}{2}
 \newcommand{\figw}[4]{%
-  \IfFileExists{figures/#2.png}{%
+  \IfFileExists{#2.png}{%
   \begin{figure*}[!t]
     \centering
-    \includegraphics[width=#1]{figures/#2.png}
+    \includegraphics[width=#1]{#2.png}
     \caption{#3}
     \label{#4}
   \end{figure*}}{}}
@@ -284,7 +286,7 @@ reduces how much information each dimension carries rather than how many dimensi
 \label{tab:recon}
 \centering
 \setlength{\tabcolsep}{3.2pt}
-\resizebox{\columnwidth}{!}{\input{generated/tab-recon.tex}}
+\resizebox{\columnwidth}{!}{\input{../runs/workshop4/generated/tab-recon.tex}}
 \end{table}
 
 \figw{\textwidth}{fig-w4-reconstructions}{Sample reconstructions of eight test states (four safe,
@@ -328,7 +330,7 @@ training regime. Fig.~\ref{fig:anomaly} shows the curves.
 \label{tab:anomaly}
 \centering
 \setlength{\tabcolsep}{4pt}
-\input{generated/tab-anomaly.tex}
+\input{../runs/workshop4/generated/tab-anomaly.tex}
 \end{table}
 
 \begin{table}[t]
@@ -336,7 +338,7 @@ training regime. Fig.~\ref{fig:anomaly} shows the curves.
 \label{tab:sweep}
 \centering
 \setlength{\tabcolsep}{5pt}
-\input{generated/tab-sweep.tex}
+\input{../runs/workshop4/generated/tab-sweep.tex}
 \end{table}
 
 \figw{\textwidth}{fig-w4-anomaly}{Anomaly detection on the test set. (a) ROC and (b)
@@ -383,7 +385,7 @@ coloured by $|\theta|$.}{fig:tsne}
 \label{tab:latent}
 \centering
 \setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{\input{generated/tab-latent.tex}}
+\resizebox{\columnwidth}{!}{\input{../runs/workshop4/generated/tab-latent.tex}}
 \end{table}
 
 \figw{0.85\textwidth}{fig-w4-latent-correlation}{Absolute Pearson correlation between each latent
@@ -498,7 +500,7 @@ DQN states here).
 \label{tab:w3}
 \centering
 \setlength{\tabcolsep}{4pt}
-\input{generated/tab-w3.tex}
+\input{../runs/workshop4/generated/tab-w3.tex}
 \end{table}
 
 \figw{\textwidth}{fig-w4-w3-monitoring}{Monitoring the Workshop~3 controllers on 100 test

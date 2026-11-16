@@ -6,22 +6,24 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{url}
+% Local: figures live in runs/workshop3/figures/  Overleaf: figures/ (see scripts/pack_report.py)
+\graphicspath{{../runs/workshop3/figures/}{figures/}}
 
 % ---------------------------------------------------------------------------
 % Helper macros
 % \todo{...}  -> red text for things the authors must fill in
 % \figph[width]{description}{file} -> inserts figures/<file>.png when it exists
-%               (generate them with: python workshop3/src/make_report_assets.py);
+%               (generate them with: python src/w3/make_report_assets_w3.py);
 %               otherwise it shows a framed placeholder so the document compiles.
 % generated/macros.tex -> every number of the text, written by the same script.
 % ---------------------------------------------------------------------------
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 \newcommand{\figph}[3][\columnwidth]{%
-  \IfFileExists{figures/#3.png}{%
-    \includegraphics[width=#1]{figures/#3.png}}{%
+  \IfFileExists{#3.png}{%
+    \includegraphics[width=#1]{#3.png}}{%
     \fbox{\parbox[c][2.6cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{\centering\small
-    \textbf{Insert figure:} #2\\[2pt] \texttt{figures/#3.png}}}}}
-\input{generated/macros}
+    \textbf{Insert figure:} #2\\[2pt] \texttt{#3.png}}}}}
+\input{../runs/workshop3/generated/macros}
 
 \begin{document}
 
@@ -302,7 +304,7 @@ measures stability at the end of training.
 \hline
 \textbf{Configuration} & \textbf{LR} & $\boldsymbol{\gamma}$ & \textbf{$\epsilon$ decay} & \textbf{L2} & $\boldsymbol{k}$ &
 \textbf{Best val. return} & \textbf{Final val. return} & \textbf{Runs $\geq$ 475} & \textbf{Steps to 475} \\ \hline
-\input{generated/tab_sweep_rows}
+\input{../runs/workshop3/generated/tab_sweep_rows}
 \end{tabular}
 \end{table*}
 
@@ -388,7 +390,7 @@ models consider dangerous.
 \hline
 & \multicolumn{6}{c||}{\textbf{Nominal test}} & \multicolumn{2}{c|}{\textbf{Noisy test (\NoiseStd~N)}} \\ \hline
 \textbf{Policy} & \textbf{Return} & \textbf{Succ. (\%)} & \textbf{Fail $x$ (\%)} & \textbf{W1 dang. (\%)} & \textbf{W2 dang. (\%)} & \textbf{$|\theta|$ (deg)} & \textbf{Return} & \textbf{Succ. (\%)} \\ \hline
-\input{generated/tab_test_rows}
+\input{../runs/workshop3/generated/tab_test_rows}
 \end{tabular}
 \end{table*}
 
@@ -440,7 +442,7 @@ agents, not as a general result.
 \hline
 & \multicolumn{5}{c||}{\textbf{Nominal}} & \multicolumn{2}{c|}{\textbf{Noisy}} \\ \hline
 \textbf{Seed} & \textbf{Ret.} & \textbf{Succ.} & \textbf{W1 d.} & \textbf{W2 d.} & $|\theta|$ & \textbf{Ret.} & \textbf{Succ.} \\ \hline
-\input{generated/tab_seed_rows}
+\input{../runs/workshop3/generated/tab_seed_rows}
 \end{tabular}
 \end{table}
 
