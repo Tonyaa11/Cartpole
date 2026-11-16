@@ -1,0 +1,588 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{url}
+
+% ---------------------------------------------------------------------------
+% Helper macros
+% \todo{...}  -> red text for things the authors must fill in
+% \figph[width]{description}{file} -> inserts figures/<file>.png when it exists
+%               (generate them with: python workshop3/src/make_report_assets.py);
+%               otherwise it shows a framed placeholder so the document compiles.
+% generated/macros.tex -> every number of the text, written by the same script.
+% ---------------------------------------------------------------------------
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+\newcommand{\figph}[3][\columnwidth]{%
+  \IfFileExists{figures/#3.png}{%
+    \includegraphics[width=#1]{figures/#3.png}}{%
+    \fbox{\parbox[c][2.6cm][c]{\dimexpr#1-2\fboxsep-2\fboxrule\relax}{\centering\small
+    \textbf{Insert figure:} #2\\[2pt] \texttt{figures/#3.png}}}}}
+\input{generated/macros}
+
+\begin{document}
+
+\title{Reinforcement Learning for Failure Avoidance in CartPole: a DQN Agent Grounded in Supervised Failure Prediction}
+
+\author{\IEEEauthorblockN{Miguel Angel Torres Ramirez}
+\IEEEauthorblockA{Dept. of Computer Engineering\\
+Universidad Distrital Francisco Jos\'e de Caldas\\
+Email: migatorresr@udistrital.edu.co}
+\and
+\IEEEauthorblockN{Cristian David Romero Gil}
+\IEEEauthorblockA{Dept. of Computer Engineering\\
+Universidad Distrital Francisco Jos\'e de Caldas\\
+Email: cdromerog@udistrital.edu.co}
+\and
+\IEEEauthorblockN{Omar Esteban Pe\~na Sanchez}
+\IEEEauthorblockA{Dept. of Computer Engineering\\
+Universidad Distrital Francisco Jos\'e de Caldas\\
+Email: oepenas@udistrital.edu.co}}
+
+\maketitle
+
+\begin{abstract}
+In previous workshops we predicted, from labelled CartPole trajectories, whether an
+episode was about to fail. This report turns the same system into a control problem:
+an agent pushes the cart left or right at every step and must keep the pole upright
+for as long as possible. We formulate the task as a Markov Decision Process, implement
+a custom Gymnasium environment whose dynamics match CartPole-v1 exactly, add a
+potential-based reward shaping built from the Workshop~1 finding that the distance to
+the failure limits predicts failures, and train a Deep Q-Network implemented from
+scratch. Six configurations, each changing one hyperparameter, were trained with three
+seeds. The selected agent survives \TestDQNMean\ of 500 steps on average on 100
+held-out initial states (\TestDQNSuccess\% success), against \TestRandMean\ for a random
+policy, but it does not beat a hand-designed PD rule, and it operates closer to the
+failure limits: the Workshop~1 and Workshop~2 models flag \TestDQNDanger\% and
+\TestDQNDangerWTwo\% of its steps as dangerous, and its return falls to \NoisyDQNMean\
+under actuator noise. The most robust controller was the Workshop~2 LSTM used as a
+one-step look-ahead policy (\NoisyWTwoMean\ steps under noise), a supervised model
+that, unlike DQN, relies on expert-generated labels and on a model of the dynamics.
+Training curves show fast learning followed by policy degradation in every
+configuration, which we diagnose and mitigate with validation-based checkpoint selection.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Reinforcement learning, Deep Q-Network, Markov decision process, reward shaping, CartPole, Gymnasium.
+\end{IEEEkeywords}
+
+%% ======================================================================
+\section{Introduction}
+Workshops~1 and~2 treated CartPole failures as a supervised problem: given the state
+of the cart and the pole, decide whether the episode will fail within five steps. A
+classifier of that kind tells \emph{when} a failure is coming, but not \emph{what to do}
+about it. Choosing actions is a different problem: every push changes the states that
+can be reached later, so the quality of a decision is only known after its consequences
+unfold. This is the setting of reinforcement learning (RL), where an agent learns a
+policy by interacting with an environment and receiving rewards \cite{sutton2018}.
+
+RL fits our domain naturally for three reasons. First, the task is a sequence of
+dependent decisions. Second, success is measured by a reward (the time the pole stays
+up) rather than by labels: our dataset contains the actions of a noisy expert policy,
+not the \emph{correct} action for each state. Third, the system can be simulated, so
+interactions are cheap.
+
+The contributions of this report are: (i) a complete MDP specification of the
+control task, grounded in the findings of Workshop~1; (ii) a Gymnasium environment
+validated against CartPole-v1 and with a random policy; (iii) a DQN agent
+\cite{mnih2015} implemented from scratch, with a six-configuration, three-seed
+hyperparameter search; and (iv) a test-set comparison against six baselines that need
+no RL training, two of which turn the Workshop~1 classifier and the Workshop~2 LSTM into
+policies, together with a sample-efficiency analysis.
+
+Section~II defines the MDP, Section~III the environment, Section~IV the agent,
+Section~V the hyperparameter search, Section~VI the test evaluation, Section~VII the
+sample efficiency, Section~VIII discusses the results and Section~IX concludes.
+
+%% ======================================================================
+\section{MDP Formulation}
+
+\subsection{Problem Statement}
+The agent controls a cart that moves on a 4.8~m track and carries a pole hinged on
+top. At each time step (0.02~s) it applies a horizontal force of $\pm 10$~N. The goal
+is to keep the pole upright and the cart on the track for as long as possible, up to
+500 steps (10~s). Table~\ref{tab:mdp} summarises the five components of the MDP.
+
+\begin{table}[t]
+\caption{MDP SPECIFICATION}
+\label{tab:mdp}
+\centering
+\small
+\begin{tabular}{|p{1.5cm}|p{5.9cm}|}
+\hline
+\textbf{Component} & \textbf{Definition} \\ \hline
+State $s_t$ & $(x, \dot x, \theta, \dot\theta) \in \mathbb{R}^4$: cart position, cart velocity, pole angle, pole angular velocity \\ \hline
+Actions $a_t$ & $\{0, 1\}$: push left ($-10$~N) or push right ($+10$~N) \\ \hline
+Transition & cart-pole equations of motion, explicit Euler step of 0.02~s; deterministic given $(s_t, a_t)$; random initial state $s_0 \sim U(-0.05, 0.05)^4$ \\ \hline
+Reward & $r_t = 1$ per step survived, plus optional shaping $F = \gamma\Phi(s_{t+1}) - \Phi(s_t)$ \\ \hline
+Termination & failure if $|\theta| > 12^\circ$ or $|x| > 2.4$~m (terminal); truncation at 500 steps (not terminal) \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{State Space}
+The observation is the 4-dimensional physical state. It is Markovian: position,
+velocity, angle and angular velocity completely determine the future evolution of the
+system for a given sequence of forces. We did not feed the 16 engineered features of
+Workshop~1 to the agent: they are functions of the current and past states, so they add
+no information for a Markovian controller, and the Q-network can learn its own
+features. The inputs are divided by fixed physical scales (the failure limits for $x$
+and $\theta$, and typical magnitudes for the velocities); these constants come from the
+environment definition, not from data.
+
+\subsection{Action Set}
+The action space is discrete with two actions: 0 = push left and 1 = push right. There
+is no ``do nothing'' action, as in the original problem \cite{barto1983}: balancing
+results from alternating pushes.
+
+\subsection{Transition Dynamics}
+The next state $s_{t+1} = f(s_t, a_t)$ follows the frictionless cart-pole equations
+\cite{barto1983}. With $F = \pm 10$~N, $m_p = 0.1$~kg, $M = m_c + m_p = 1.1$~kg,
+half-length $l = 0.5$~m and $g = 9.8$~m/s$^2$:
+\begin{align}
+\ddot\theta &= \frac{g\sin\theta - \cos\theta\,\big(F + m_p l \dot\theta^2 \sin\theta\big)/M}
+                    {l\left(\frac{4}{3} - \frac{m_p\cos^2\theta}{M}\right)}, \\
+\ddot x &= \frac{F + m_p l\left(\dot\theta^2\sin\theta - \ddot\theta\cos\theta\right)}{M},
+\end{align}
+followed by an explicit Euler update of the four variables with $\tau = 0.02$~s. The
+transition is deterministic given the action. Stochasticity comes from the random
+initial state and, in the robustness test of Section~VI, from Gaussian noise added to
+the force.
+
+\subsection{Reward Function}
+The \emph{task reward} is $r_t = +1$ for every step the system survives, so the
+undiscounted return equals the number of steps survived (maximum 500). It is dense in
+time but says nothing about \emph{how close} the system is to failing: the only negative
+signal is the loss of future rewards when the episode ends.
+
+Workshop~1 showed that the distance to the failure limits is the best predictor of a
+failure: adding it raised the ROC-AUC of the linear classifier from 0.542 to 0.981. We
+encode that finding as a potential function
+\begin{equation}
+\Phi(s) = -\frac{k}{2}\left[\left(\frac{x}{2.4}\right)^2 + \left(\frac{\theta}{0.2095}\right)^2\right],
+\end{equation}
+which is 0 at the centred upright position and decreases towards the limits, and train
+with the shaped reward $r_t + F_t$, where $F_t = \gamma\Phi(s_{t+1}) - \Phi(s_t)$ and
+$\Phi(\text{terminal}) = 0$. Potential-based shaping provably leaves the optimal policy
+unchanged \cite{ng1999}: over an episode the discounted shaping terms telescope to
+approximately $-\Phi(s_0)$, a constant close to zero, so they can only change \emph{how fast} the
+agent learns, not \emph{what} it learns. We use $k = \ShapingK$; the configuration
+\texttt{no\_shaping} ($k = 0$) measures its effect. All agents are evaluated on the task
+reward only. The relevant time horizon is long: with $\gamma = \DiscountGamma$ the
+effective horizon $1/(1-\gamma)$ is about 100 steps, comparable to the time it takes a
+drifting cart to leave the track.
+
+\subsection{Episode Termination}
+An episode \emph{terminates} (failure) when $|\theta| > 12^\circ$ or $|x| > 2.4$~m, the
+same limits that defined the danger label of Workshop~1. It is \emph{truncated} after
+500 steps: that is a time limit, not a failure, so the agent still bootstraps from the
+last state; only terminations set the value of the next state to zero. Reaching the
+time limit is a success.
+
+%% ======================================================================
+\section{Environment Implementation and Validation}
+
+\subsection{Implementation}
+\texttt{CartPoleControlEnv} (\texttt{workshop3/src/env.py}) subclasses
+\texttt{gymnasium.Env} \cite{towers2024}. It declares
+\texttt{action\_space = Discrete(2)} and a 4-dimensional \texttt{Box} observation
+space, implements \texttt{reset()} (random initial state from the seeded generator)
+and \texttt{step()} with the transition, the reward (task reward plus shaping) and the
+termination and truncation logic. The \texttt{info} dictionary reports the task reward
+and the outcome (\emph{failure by angle}, \emph{failure by position} or \emph{time
+limit}). \texttt{render()} returns a text line or an RGB image drawn with NumPy
+(Fig.~\ref{fig:render}).
+
+\begin{figure}[t]
+\centering
+\figph{frames produced by env.render()}{fig-render}
+\caption{Frames produced by \texttt{render()} along a test episode of the selected agent (red marks: failure limits $|x| = 2.4$~m).}
+\label{fig:render}
+\end{figure}
+
+\subsection{Validation}
+Three checks were run before any training. (1) Gymnasium's \texttt{check\_env}
+confirmed the API (spaces, signatures and data types). (2) Our environment and
+Gymnasium's CartPole-v1, reset with the same seeds and fed the same random actions for
+20 episodes, produced a maximum state difference of \ParityDiff: the dynamics are
+identical to those of the system that generated our dataset. (3) We ran 100 episodes
+with a uniformly random policy (Fig.~\ref{fig:random}): the mean return was
+\RandMeanReturn~$\pm$~\RandStdReturn\ (length between \RandMinLen\ and \RandMaxLen\
+steps, median \RandMedianLen), both actions occurred (\RandLeftPct\% left,
+\RandRightPct\% right) and \RandThetaFailPct\% of the episodes ended because the pole
+fell. With $k = 1$ the mean shaped return was \RandShapedReturn, almost equal to the
+task return, as expected from the telescoping property.
+
+\begin{figure*}[t]
+\centering
+\figph[0.8\textwidth]{random-policy diagnostics}{fig-random-policy}
+\caption{Random-policy diagnostics on 100 episodes: (a) episode-length distribution, (b) frequency of each action.}
+\label{fig:random}
+\end{figure*}
+
+%% ======================================================================
+\section{Agent: Deep Q-Network}
+
+\subsection{Algorithm and Architecture}
+DQN \cite{mnih2015} suits a discrete action space with Markovian dynamics. It
+approximates the action-value function $Q(s, a; w)$, the expected discounted return of
+taking action $a$ in state $s$ and acting greedily afterwards, and is trained toward the
+Q-learning target \cite{watkins1992}
+\begin{equation}
+y = r + \gamma\,(1 - d)\max_{a'} Q(s', a'; w^-),
+\end{equation}
+where $d = 1$ only for a failure and $w^-$ are the weights of a target network. The
+Q-network (implemented in PyTorch \cite{paszke2019}) is a multilayer perceptron
+$4 \to 128 \to 128 \to 2$ with ReLU activations and a linear output, \NParams\
+trainable parameters.
+
+\subsection{Training Loop}
+Each environment step stores the transition $(s, a, r, s', d)$ in a replay buffer of
+\Buffer\ transitions; after \LearnStarts\ steps, every step samples a mini-batch of
+\Batch\ transitions uniformly, which breaks the correlation between consecutive states.
+The loss is the Huber loss between $Q(s, a; w)$ and $y$, minimised with Adam; the
+gradient norm is clipped at \GradClip\ and the target network is a hard copy of the
+online network every \TargetUpdate\ gradient steps. Exploration is
+$\epsilon$-greedy: $\epsilon$ starts at 1 and is multiplied by the decay factor after
+every episode, down to \EpsMin. Each run lasts \TrainEpisodes\ episodes; per-episode
+return, length, $\epsilon$ and loss are logged to TensorBoard and CSV files in
+\texttt{runs/workshop3/}. Table~\ref{tab:hparams} lists the reference values.
+
+\begin{table}[t]
+\caption{REFERENCE HYPERPARAMETERS}
+\label{tab:hparams}
+\centering
+\small
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Hyperparameter} & \textbf{Value} \\ \hline
+Learning rate (Adam) & \LR \\ \hline
+Discount factor $\gamma$ & \DiscountGamma \\ \hline
+$\epsilon$ decay per episode / minimum & \EpsDecay\ / \EpsMin \\ \hline
+Weight decay (L2) & 0 \\ \hline
+Shaping strength $k$ & \ShapingK \\ \hline
+Replay buffer / batch size & \Buffer\ / \Batch \\ \hline
+Learning starts & \LearnStarts\ steps \\ \hline
+Target-network update & every \TargetUpdate\ updates \\ \hline
+Gradient clipping (L2 norm) & \GradClip \\ \hline
+Episodes / validation interval & \TrainEpisodes\ / \EvalEvery\ episodes \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Validation Loop and Checkpointing}
+Initial states are split into three disjoint sets: training episodes use seeds above
+$10^5$, validation uses 10 fixed seeds and the test uses 100 other fixed seeds.
+Every \EvalEvery\ episodes the agent is evaluated greedily ($\epsilon = 0$) on the
+validation episodes. We report the mean validation return and its moving average over
+the last three evaluations (smoothed validation return), and keep the checkpoint with
+the highest validation return of each run. The best run of the selected configuration
+is saved as \texttt{checkpoints/agent\_best.pt}.
+
+%% ======================================================================
+\section{Hyperparameter Search}
+
+\subsection{Protocol}
+Six configurations were trained with seeds 42, 7 and 99 (18 runs). Each one changes a
+single factor with respect to \texttt{reference}, so that differences can be attributed
+to that factor: a lower learning rate, a lower discount factor, slower exploration
+decay, L2 weight decay, and no reward shaping. A configuration is selected with
+validation results only: the highest mean (over seeds) best validation return, ties
+broken by the final validation return (mean of the last five evaluations), which
+measures stability at the end of training.
+
+\begin{table*}[t]
+\caption{HYPERPARAMETER SEARCH: VALIDATION RESULTS (MEAN $\pm$ STD OVER 3 SEEDS)}
+\label{tab:sweep}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+\hline
+\textbf{Configuration} & \textbf{LR} & $\boldsymbol{\gamma}$ & \textbf{$\epsilon$ decay} & \textbf{L2} & $\boldsymbol{k}$ &
+\textbf{Best val. return} & \textbf{Final val. return} & \textbf{Runs $\geq$ 475} & \textbf{Steps to 475} \\ \hline
+\input{generated/tab_sweep_rows}
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\figph[0.95\textwidth]{validation return vs environment steps for every configuration and seed}{fig-training-curves}
+\caption{Validation return (10 episodes, greedy policy) as a function of environment steps for every configuration and seed. Dashed line: 475, the CartPole-v1 solving threshold.}
+\label{fig:curves}
+\end{figure*}
+
+\subsection{Results}
+Table~\ref{tab:sweep} and Fig.~\ref{fig:curves} summarise the 18 runs. ``Runs $\geq$
+475'' counts the runs whose \emph{smoothed} validation return reached 475, which
+requires three consecutive good evaluations. Every configuration shows measurable
+learning: the validation return rises from about 10 to several hundred within the
+first few thousand steps. The selected configuration is \texttt{\BestConfig}, whose
+three seeds all reached a validation return of \BestCfgBestVal; its best run (seed
+\BestSeed, episode \BestEpisode) is \texttt{agent\_best.pt}.
+
+The most striking pattern is shared by all configurations: the final validation return
+(\MinFinalVal\ to \MaxFinalVal) is far below the best one. The agents learn a good policy
+and then lose it, a known instability of DQN caused by bootstrapping from a moving
+target with function approximation. Fig.~\ref{fig:explore}(b) shows how it happens for
+the reference configuration: during the first two thousand steps the episodes end
+because the pole falls; once the agent has learned to hold the pole, almost every
+validation episode that does not reach 500 steps ends because the cart leaves the
+track, including those of the degraded policies late in training (beyond about 22
+thousand steps the curve comes from a single seed, the only run that lasted that long).
+The degraded policy keeps the pole up but lets the cart drift, a failure
+whose cost appears about 100 steps later, at the edge of the effective horizon of
+$\gamma = 0.99$. Selecting checkpoints on validation is what makes the final agent
+usable despite this degradation.
+
+Regarding individual factors: with the lower learning rate none of the seeds reached a
+validation return of 500, so its best return is the lowest of the search; $\gamma = 0.95$ reached 500 in all seeds
+but degraded the most, to a final return of about 96, consistent with a horizon of about
+20 steps that cannot see the drift failure; slower exploration decay and weight decay
+did not change the picture; and removing the shaping produced practically the same best
+and final returns as the reference. With $k = 1$ the shaping had no measurable effect,
+which is compatible with its theoretical role (it cannot change the optimal policy) but
+means it did not speed up learning either.
+
+\begin{figure*}[t]
+\centering
+\figph[0.95\textwidth]{epsilon schedules and how validation episodes end}{fig-exploration}
+\caption{(a) Exploration rate per episode for the two decay factors. (b) Reference configuration: share of validation episodes that end by cart position or by pole angle during training (mean of three seeds).}
+\label{fig:explore}
+\end{figure*}
+
+%% ======================================================================
+\section{Test Evaluation and Comparison}
+
+\subsection{Protocol and Baselines}
+The test set contains 100 initial states never used for training or selection. It is
+evaluated in two conditions: \emph{nominal} (the training dynamics) and \emph{noisy},
+with Gaussian actuator noise of standard deviation \NoiseStd~N added to every push, a
+perturbation the agent never saw. The DQN agent is compared with six policies that
+need no RL training:
+\begin{itemize}
+\item \textbf{Random:} uniform random actions.
+\item \textbf{Alternating (fixed):} left, right, left\dots, a fixed open-loop strategy.
+\item \textbf{Angle rule (greedy):} push towards the side the pole leans.
+\item \textbf{PD rule (heuristic):} push towards the sign of $\theta + 0.5\,\dot\theta$; the gain was chosen on the validation episodes.
+\item \textbf{W1 classifier (look-ahead):} the Workshop~1 Gradient Boosting classifier used as a policy. For each action, the known dynamics give the next state and the classifier scores its probability of danger; the action with the lower probability is chosen. Unlike DQN, it uses a model of the dynamics.
+\item \textbf{W2 LSTM (look-ahead):} the same rule with the Workshop~2 model, a 2-layer LSTM that reads the last \WTwoWindow\ steps of the episode (states and the actions actually taken). The candidate step carries the action that leads to it, because the action that will be taken there is not known yet. The model is loaded from \texttt{checkpoints/model\_best.pt} without retraining; on the Workshop~2 test episodes our bridge reproduces its reported test F1 exactly.
+\end{itemize}
+
+Besides the return, we report the success rate (500 steps reached), the share of
+failures by cart position, the mean $|\theta|$, and two \emph{danger rates}: the share
+of steps that the Workshop~1 classifier (threshold \WOneThreshold) and the Workshop~2
+LSTM (threshold \WTwoThreshold), each with the threshold chosen on its own validation
+set, flag as being within five steps of a failure. These metrics link the three
+workshops: they measure how much time each policy spends in states that the supervised
+models consider dangerous.
+
+\begin{table*}[t]
+\caption{TEST RESULTS ON 100 HELD-OUT EPISODES (RETURN = STEPS SURVIVED, MAXIMUM 500)}
+\label{tab:test}
+\centering
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|l|c|c|c|c|c|c||c|c|}
+\hline
+& \multicolumn{6}{c||}{\textbf{Nominal test}} & \multicolumn{2}{c|}{\textbf{Noisy test (\NoiseStd~N)}} \\ \hline
+\textbf{Policy} & \textbf{Return} & \textbf{Succ. (\%)} & \textbf{Fail $x$ (\%)} & \textbf{W1 dang. (\%)} & \textbf{W2 dang. (\%)} & \textbf{$|\theta|$ (deg)} & \textbf{Return} & \textbf{Succ. (\%)} \\ \hline
+\input{generated/tab_test_rows}
+\end{tabular}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\figph{test return of every policy}{fig-test-comparison}
+\caption{Mean test return ($\pm$ one standard deviation) of every policy in the nominal and noisy test conditions.}
+\label{fig:test}
+\end{figure}
+
+\subsection{Results}
+Table~\ref{tab:test} and Fig.~\ref{fig:test} show the results. In the nominal
+condition the selected agent survives \TestDQNMean~$\pm$~\TestDQNStd\ steps with
+\TestDQNSuccess\% success, far above the random (\TestRandMean), alternating
+(\TestAltMean) and angle-rule (\TestAngleMean) policies. Across the three seeds of the
+selected configuration the mean is \SeedsTestMean~$\pm$~\SeedsTestStd, so the result does
+not depend on a lucky seed. The agent did not outperform the PD rule or the W2-guided
+policy, which both solve every nominal test episode, and it is slightly above the W1
+classifier used as a policy (\TestWOneMean, \TestWOneSuccess\% success).
+
+The danger rate and the trajectories reveal \emph{how} the agent survives. The PD rule
+keeps the pole almost vertical (mean $|\theta|$ of \TestPDTheta$^\circ$) and spends
+\TestPDDanger\% of its steps in danger. The selected agent swings the pole between about
+$-11^\circ$ and $+11^\circ$, close to the $12^\circ$ limit (Fig.~\ref{fig:traj}). The two
+supervised models, trained independently and with different inputs, agree on this: the
+Workshop~1 classifier flags \TestDQNDanger\% of its steps as dangerous and the Workshop~2
+LSTM \TestDQNDangerWTwo\%. Both policies maximise the task reward equally, but the agent
+has a much smaller safety margin, and the noisy test exposes it: its return drops to
+\NoisyDQNMean\ with \NoisyDQNSuccess\% success, and \NoisyDQNThetaFail\% of the episodes
+end because the pole falls. The PD rule (\NoisyPDMean) and the W1-guided policy
+(\NoisyWOneMean) degrade less, mostly through cart drift. The W2-guided policy is the
+most robust of all: \NoisyWTwoMean\ steps with \NoisyWTwoSuccess\% success under noise,
+keeping the pole within a mean $|\theta|$ of \TestWTwoTheta$^\circ$ in the nominal test.
+
+Table~\ref{tab:seeds} shows that this fragility belongs to the selected checkpoint,
+not to the configuration: the other two seeds have both danger rates below 0.1\% and
+keep most of their performance under noise. Among these three agents the danger rates,
+measured in the nominal condition, identified the fragile one, whereas the validation
+return, equal to 500 for the three, could not. We note this as an observation on three
+agents, not as a general result.
+
+\begin{table}[t]
+\caption{SELECTED CONFIGURATION: TEST RESULTS PER TRAINING SEED}
+\label{tab:seeds}
+\centering
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|c|c|c|c|c||c|c|}
+\hline
+& \multicolumn{5}{c||}{\textbf{Nominal}} & \multicolumn{2}{c|}{\textbf{Noisy}} \\ \hline
+\textbf{Seed} & \textbf{Ret.} & \textbf{Succ.} & \textbf{W1 d.} & \textbf{W2 d.} & $|\theta|$ & \textbf{Ret.} & \textbf{Succ.} \\ \hline
+\input{generated/tab_seed_rows}
+\end{tabular}
+\end{table}
+
+\subsection{Comparison with Workshops 1 and 2}
+The supervised models of the previous workshops measure a different quantity
+(classification of danger states), so their metrics cannot be placed in the same
+column as a return; Table~\ref{tab:w12} relates both views. On the common test
+episodes of Workshops~1 and~2, the Workshop~2 LSTM was the better predictor
+(F1 \WTwoFOne\ versus \WOneFOne, recall \WTwoRecall\ versus \WOneRecall, PR-AUC
+\WTwoPRAUC\ versus \WOnePRAUC), and as a look-ahead policy it was also the better
+controller (\TestWTwoMean\ versus \TestWOneMean\ nominal, \NoisyWTwoMean\ versus
+\NoisyWOneMean\ with noise). A plausible reason, which we did not test separately, is
+that its 16-step window lets it judge where the system is heading, while the W1 features
+look back only three steps. Both supervised controllers rely on two resources the DQN
+agent did not have: labels produced by an expert policy and a model of the dynamics to
+simulate each action.
+
+\begin{table}[t]
+\caption{SUPERVISED MODELS AS PREDICTORS (W1/W2 TEST SET) AND AS LOOK-AHEAD POLICIES (W3 TEST)}
+\label{tab:w12}
+\centering
+\small
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{|l|c|c|c||c|c|}
+\hline
+& \multicolumn{3}{c||}{\textbf{Prediction}} & \multicolumn{2}{c|}{\textbf{Control (return)}} \\ \hline
+\textbf{Model} & \textbf{F1} & \textbf{Recall} & \textbf{PR-AUC} & \textbf{Nominal} & \textbf{Noisy} \\ \hline
+W1 Gradient Boosting & \WOneFOne & \WOneRecall & \WOnePRAUC & \TestWOneMean & \NoisyWOneMean \\ \hline
+W2 LSTM & \WTwoFOne & \WTwoRecall & \WTwoPRAUC & \TestWTwoMean & \NoisyWTwoMean \\ \hline
+DQN (this work) & -- & -- & -- & \TestDQNMean & \NoisyDQNMean \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Sample Trajectories}
+Fig.~\ref{fig:traj} shows four test episodes of the selected agent: pole angle, cart
+position, actions (push right in blue) and cumulative return. The agent alternates
+pushes in bursts, producing a regular oscillation of the pole while the cart stays
+within about one meter of the centre; the return grows by one per step until the
+time limit.
+
+\begin{figure*}[t]
+\centering
+\figph[0.95\textwidth]{four test episodes of the selected agent}{fig-trajectories}
+\caption{Four test episodes of the selected agent: pole angle, cart position, action taken at each step and cumulative task return.}
+\label{fig:traj}
+\end{figure*}
+
+%% ======================================================================
+\section{Sample Efficiency}
+Fig.~\ref{fig:sample} plots the smoothed validation return of the selected
+configuration against the number of environment steps. On average its seeds first
+reached a smoothed return of 195 after \StepsHalfMean\ steps; the solving level of 475
+was reached by \RunsSolved\ seeds (after \StepsSolvedMean\ steps), and the best
+checkpoints were saved after \BestCheckpointSteps\ steps on average.
+
+\begin{figure*}[t]
+\centering
+\figph[0.95\textwidth]{learning curve of the selected configuration against the baselines}{fig-sample-efficiency}
+\caption{Sample efficiency: smoothed validation return of the selected configuration (mean and min--max of three seeds) versus environment steps, with the test return of the baselines (PD rule and W2 LSTM share the line at 500) and the number of environment steps stored in the dataset of Workshops~1 and~2.}
+\label{fig:sample}
+\end{figure*}
+
+For comparison, the dataset of Workshops~1 and~2 contains \WOneDatasetSteps\ environment
+steps, of which \WOneTrainRows\ labelled rows were used to train both supervised models.
+The RL agent therefore reached competent control with fewer environment interactions than
+were needed to build the supervised dataset, although the supervised models, once turned
+into controllers, ended up more robust. The comparison has two caveats. The supervised
+models learn to \emph{predict} failures, and turning them into a controller required the
+dynamics model used by the look-ahead policy; and the dataset itself was produced by an
+expert policy, a source of knowledge that the RL agent did not have. Conversely, the PD
+rule needs no data at all, only knowledge of the physics.
+
+%% ======================================================================
+\section{Discussion}
+
+\emph{Did RL outperform supervised learning?} No. In the nominal environment the RL agent
+matches the W1-guided policy and comes close to the PD rule and the W2-guided policy,
+learning from rewards alone and without a model of the dynamics. Under actuator noise it
+was the least robust of these four, and the W2 LSTM with look-ahead was the best
+controller overall. The comparison is not like for like: the supervised controllers used
+expert-generated labels and the simulator as a dynamics model, the DQN agent only its own
+interactions. On a system this simple and well understood, a hand-designed rule also
+remains a strong baseline.
+
+\emph{Key challenges.} The main one was training instability: all configurations reached
+a good policy and then degraded, so the final agent depends on validation-based
+checkpoint selection (Fig.~\ref{fig:curves}). The second is that the task reward does
+not reward safety margins: surviving with the pole near the limit earns the same
+reward as keeping it vertical, which explains the oscillating behaviour of the selected
+agent and its fragility under noise. Validating only on nominal episodes could not detect
+this; adding noise to the validation episodes, or the W1/W2 danger rates, to the
+selection criterion is a natural improvement.
+
+\emph{Exploration versus exploitation.} With a decay of \EpsDecay\ per episode,
+$\epsilon$ falls below 0.1 after about 230 episodes; the slower decay of 0.995 keeps it
+above 0.2 for the whole run (Fig.~\ref{fig:explore}a). Slower decay produced shorter,
+noisier training episodes, and therefore fewer environment steps per run, without
+improving the best validation return. Late in training, when exploration is low, the policy drifted
+toward the cart-position failure mode, which suggests that low exploration together with
+bootstrapping lets errors in rarely visited states (near the track edges) go uncorrected.
+
+\emph{Reward shaping.} The potential-based shaping with $k = 1$ did not change the
+results measurably. Because it cannot change the optimal policy, it also cannot make the
+agent prefer larger safety margins; a reward that explicitly penalises proximity to the
+limits would change the task, and therefore the optimal policy, which is a design
+decision rather than a tuning one.
+
+\emph{Limitations.} Three seeds per configuration and ten validation episodes give noisy
+estimates; hyperparameters were varied one at a time, so interactions between them
+were not explored; and the comparison with the supervised models is indirect because
+they solve a prediction task. Double DQN, soft target updates or prioritised replay
+could reduce the degradation.
+
+%% ======================================================================
+\section{Conclusions}
+We formulated CartPole control as an MDP grounded in our previous failure-prediction
+work, implemented and validated a Gymnasium environment identical in dynamics to
+CartPole-v1, and trained a from-scratch DQN agent with a six-configuration,
+three-seed hyperparameter search. The agent learned measurably, surviving
+\TestDQNMean\ of 500 steps on held-out episodes against \TestRandMean\ for a random
+policy, but it did not beat a PD rule, and it operates with a small safety margin that
+makes it fragile under actuator noise. The Workshop~1 and Workshop~2 models, reused as
+danger monitors, revealed that margin, and the Workshop~2 LSTM, reused as a look-ahead
+policy, was the most robust controller. Future work includes noise-aware validation,
+reward functions that value safety margins explicitly, and stabilised variants of DQN.
+
+\section*{Reproducibility}
+Code, configurations, logs and checkpoints are available at
+\url{https://github.com/Tonyaa11/Cartpole} (folder \texttt{workshop3/}). All numbers and
+figures of this report are generated from the logs by
+\texttt{workshop3/src/make\_report\_assets.py}; seeds are fixed (training 42, 7, 99;
+validation 10000--10009; test 20000--20099). Neural-network training can differ slightly
+across library versions and hardware.
+
+\begin{thebibliography}{00}
+\bibitem{sutton2018} R. S. Sutton and A. G. Barto, \emph{Reinforcement Learning: An Introduction}, 2nd ed. Cambridge, MA, USA: MIT Press, 2018.
+\bibitem{mnih2015} V. Mnih et al., ``Human-level control through deep reinforcement learning,'' \emph{Nature}, vol. 518, no. 7540, pp. 529--533, 2015.
+\bibitem{watkins1992} C. J. C. H. Watkins and P. Dayan, ``Q-learning,'' \emph{Mach. Learn.}, vol. 8, no. 3--4, pp. 279--292, 1992.
+\bibitem{barto1983} A. G. Barto, R. S. Sutton, and C. W. Anderson, ``Neuronlike adaptive elements that can solve difficult learning control problems,'' \emph{IEEE Trans. Syst., Man, Cybern.}, vol. SMC-13, no. 5, pp. 834--846, 1983.
+\bibitem{ng1999} A. Y. Ng, D. Harada, and S. Russell, ``Policy invariance under reward transformations: Theory and application to reward shaping,'' in \emph{Proc. 16th Int. Conf. Mach. Learn. (ICML)}, 1999, pp. 278--287.
+\bibitem{towers2024} M. Towers et al., ``Gymnasium: A standard interface for reinforcement learning environments,'' arXiv:2407.17032, 2024.
+\bibitem{paszke2019} A. Paszke et al., ``PyTorch: An imperative style, high-performance deep learning library,'' in \emph{Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol. 32, 2019.
+\end{thebibliography}
+
+\end{document}

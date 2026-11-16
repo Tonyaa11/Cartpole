@@ -1,5 +1,5 @@
 {
-  "checkpoint": "C:\\Users\\Kris\\Documents\\Universidad\\Machine_Learning\\Cartpole\\checkpoints\\model_best.pt",
+  "checkpoint": "C:\\Users\\Kris\\Documents\\Universidad\\Machine_Learning\\Cartpole\\checkpoints\\workshop2\\model_best.pt",
   "model": "Deep LSTM (Workshop 2)",
   "run_name": "w2_lstm_w16_raw",
   "best_epoch": 15,
