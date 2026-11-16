@@ -201,12 +201,12 @@ accuracy. We therefore:
       decay, gradient clipping at norm 1.0 (RNNs are prone to exploding
       gradients) and \textbf{early stopping} (patience 8 on validation F1).
 \item \textbf{Monitoring:} every epoch is logged to TensorBoard
-      (\texttt{runs/tb/}) \emph{and} to a CSV (\texttt{runs/train\_log\_*.csv})
+      (\texttt{runs/workshop2/tb/}) \emph{and} to a CSV (\texttt{runs/workshop2/train\_log\_*.csv})
       with train/val loss, F1, precision, recall, ROC-AUC, PR-AUC, accuracy,
       the selected threshold and the learning rate, so the learning curves of
       Fig.~\ref{fig:curves} can be regenerated without TensorBoard.
 \item \textbf{Checkpointing:} the epoch with the best validation F1 is saved
-      to \texttt{checkpoints/model\_best.pt} together with the scaler, the
+      to \texttt{checkpoints/workshop2/model\_best.pt} together with the scaler, the
       window configuration and the threshold, making the artifact
       self-contained for \texttt{src/w2/evaluate\_lstm.py} and
       \texttt{src/w2/test\_model.py}.
@@ -363,7 +363,7 @@ Workshop 1 the model reaches F1 = 0.865, PR-AUC = 0.956 and recall = 0.924,
 improving every ranking metric over the best baseline (Gradient Boosting,
 F1 = 0.860, PR-AUC = 0.935, recall = 0.886) while consuming only the raw
 state variables. The best model is saved in
-\texttt{checkpoints/model\_best.pt} and can be reloaded independently of the
+\texttt{checkpoints/workshop2/model\_best.pt} and can be reloaded independently of the
 training code. Future work includes grouped cross-validation, multi-seed
 evaluation, and fine-tuning strategies such as unfreezing layers with a lower
 learning rate if a larger corpus becomes available.
@@ -374,8 +374,8 @@ Code, split file and instructions are available at
 \texttt{python src/w2/train\_lstm.py}, then \texttt{python src/w2/evaluate\_lstm.py}, then
 \texttt{python src/w2/make\_figures\_w2.py} (Python 3.11.2, PyTorch 2.6.0 CPU,
 scikit-learn 1.8.0, seed 42). The per-epoch logs are in
-\texttt{runs/train\_log\_*.csv} and the comparison table in
-\texttt{runs/comparison\_*.csv}.
+\texttt{runs/workshop2/train\_log\_*.csv} and the comparison table in
+\texttt{runs/workshop2/comparison\_*.csv}.
 
 \begin{thebibliography}{00}
 \bibitem{barto1983} A. G. Barto, R. S. Sutton, and C. W. Anderson, ``Neuronlike adaptive elements that can solve difficult learning control problems,'' \emph{IEEE Trans. Syst., Man, Cybern.}, vol. SMC-13, no. 5, pp. 834--846, 1983.
