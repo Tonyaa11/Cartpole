@@ -1,0 +1,11 @@
+\begin{tabular}{lccccccc}
+\hline
+& & \multicolumn{4}{c}{\textbf{Silhouette}} & \multicolumn{2}{c}{\textbf{Linear probe}} \\
+\textbf{Space} & \textbf{Dim} & \textbf{All} & \textbf{Bal.} & \textbf{t-SNE} & \textbf{UMAP} & \textbf{ROC} & \textbf{PR} \\ \hline
+Input features & 16 & 0.336 & 0.208 & -0.117 & -0.158 & 0.981 & 0.791 \\
+AE code & 2 & 0.467 & 0.219 & 0.225 & 0.222 & 0.924 & 0.377 \\
+VAE $\mu$ & 2 & 0.509 & 0.210 & 0.153 & 0.184 & 0.571 & 0.065 \\
+W2 LSTM state & 64 & 0.613 & 0.372 & 0.191 & 0.127 & 0.997 & 0.952 \\
+MLP control$^\ddagger$ & 2 & 0.664 & 0.647 & -- & -- & 0.997 & 0.961 \\
+\hline
+\end{tabular}

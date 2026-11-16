@@ -1,0 +1,25 @@
+{
+  "z_star": 2,
+  "beta_star": 4.0,
+  "z_grid": [
+    2,
+    4,
+    8
+  ],
+  "beta_grid": [
+    0.5,
+    1.0,
+    4.0
+  ],
+  "dae_noise": 0.2,
+  "epochs": 50,
+  "rule": "max validation anomaly ROC-AUC (normal regime); ties -> simpler model",
+  "runs": {
+    "ae_best": "ae_z2_all",
+    "vae_best": "vae_b4_z2_all",
+    "ae_normal_best": "ae_z2_normal",
+    "vae_normal_best": "vae_b4_z2_normal",
+    "dae_normal": "dae_z2_normal",
+    "w2_reference": "sup_mlp_z2"
+  }
+}

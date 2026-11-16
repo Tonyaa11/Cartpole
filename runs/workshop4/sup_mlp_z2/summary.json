@@ -1,0 +1,17 @@
+{
+  "name": "sup_mlp_z2",
+  "model": "sup",
+  "regime": "all",
+  "z_dim": 2,
+  "beta": null,
+  "noise_std": 0.0,
+  "best_epoch": 11,
+  "train_rows": 24782,
+  "train_time_s": 25.33504819869995,
+  "best_train_loss": 0.12978239245992357,
+  "best_val_loss": 0.10612472146749496,
+  "best_val_roc_auc": 0.9973105089710729,
+  "best_val_pr_auc": 0.9574666055647648,
+  "best_epoch_time_s": 0.49881410598754883,
+  "val_auc": 0.9973105089710729
+}
