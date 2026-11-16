@@ -349,7 +349,7 @@ Figures are saved by `src/make_figures.py` in `report/figures/`. Each CSV file h
 
 ---
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 All experiments are reproducible due to:
 
@@ -367,11 +367,11 @@ To reproduce the Workshop 1 results:
 
 Workshop 1 main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
 
-| Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+| Model | Accuracy | Precision | Recall | F1-score | AUC-ROC |
 |---|---|---|---|---|---|
-| Logistic Regression | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
-| Random Forest | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
-| Gradient Boosting | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
+| Logistic Regression | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
 
 To reproduce the Workshop 2 results:
 
@@ -382,12 +382,12 @@ To reproduce the Workshop 2 results:
 
 **Workshop 1 baselines vs. Workshop 2 deep model** (test set, threshold chosen on validation, seed 42):
 
-| Model | Workshop | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+| Model | Workshop | Accuracy | Precision | Recall | F1-score | AUC-ROC |
 |---|---|---|---|---|---|---|
-| Logistic Regression | W1 | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
-| Random Forest | W1 | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
-| Gradient Boosting | W1 | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
-| **Deep LSTM (window 16)** | **W2** | **0.812** | **0.924** | **0.865** | **0.997** | **0.956** |
+| Logistic Regression | W1 | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | W1 | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | W1 | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
+| **Deep LSTM (window 16)** | **W2** | **0.984** | **0.812** | **0.924** | **0.865** | **0.997** |
 
 ---
 
@@ -440,14 +440,24 @@ See `workshop3/README.md` for the full run instructions.
 
 ### 9.4 Cross-Workshop Performance Summary
 
-| Model | Workshop | Task | Key metric | Value |
+W1 / W2 — failure prediction (test set, threshold on validation):
+
+| Model | Workshop | Accuracy | Precision | Recall | F1-score | AUC-ROC |
+|---|---|---|---|---|---|---|
+| Logistic Regression | W1 | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | W1 | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | W1 | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
+| Deep LSTM (window 16) | W2 | 0.984 | 0.812 | 0.924 | 0.865 | 0.997 |
+
+W3 — failure avoidance / control (100 held-out initial states):
+
+| Model | Workshop | Mean return | Episode length | Success rate |
 |---|---|---|---|---|
-| Logistic Regression | W1 | Failure prediction | F1 | 0.686 |
-| Random Forest | W1 | Failure prediction | F1 | 0.832 |
-| Gradient Boosting | W1 | Failure prediction | F1 | 0.860 |
-| Deep LSTM (window 16) | W2 | Failure prediction | F1 | 0.865 |
-| DQN (nominal) | W3 | Failure avoidance | Success rate | 97 % |
-| DQN (noisy) | W3 | Failure avoidance | Success rate | 49 % |
+| Random policy | W3 baseline | 20.7 | 20.7 | 0 % |
+| PD rule (heuristic) | W3 baseline | 500.0 | 500.0 | 100 % |
+| W1 classifier (look-ahead) | W3 baseline | 487.3 | 487.3 | 84 % |
+| **DQN — nominal** | **W3** | **498.1** | **498.1** | **97 %** |
+| **DQN — noisy (σ=2 N)** | **W3** | **370.9** | **370.9** | **49 %** |
 
 ---
 
