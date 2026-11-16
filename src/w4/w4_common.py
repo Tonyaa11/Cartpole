@@ -49,7 +49,11 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from dataset import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import (
     EPISODE_COL,
     ROOT_DIR,
     SEED,
@@ -60,7 +64,7 @@ from dataset import (
     load_raw,
     subset,
 )
-from features import build_features
+from w1.features import build_features
 
 # --------------------------------------------------------------------------- #
 # Paths

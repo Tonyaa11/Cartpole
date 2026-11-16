@@ -34,10 +34,14 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 
-from agent import DQNAgent, DQNConfig
-from common import (CKPT_DIR, CONFIG_FILE, ROOT_DIR, RUNS_DIR, SWEEP_CKPT_DIR, TRAIN_SEED_LOW,
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w3.agent import DQNAgent, DQNConfig
+from w3.common import (CKPT_DIR, CONFIG_FILE, ROOT_DIR, RUNS_DIR, SWEEP_CKPT_DIR, TRAIN_SEED_LOW,
                     TRAIN_SEEDS, VAL_SEEDS, load_json, save_json, set_global_seed)
-from env import make_env
+from w3.env import make_env
 
 # Return thresholds used in the sample-efficiency analysis
 SOLVED_THRESHOLD = 475.0   # Gymnasium's official reward threshold for CartPole-v1

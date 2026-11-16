@@ -44,7 +44,7 @@ from sklearn.preprocessing import StandardScaler
 SEED = 42
 
 # Repository paths (resolved relative to this file so scripts work from anywhere)
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 RAW_CSV = ROOT_DIR / "data" / "raw" / "cartpole_dataset.csv"
 SPLITS_JSON = ROOT_DIR / "data" / "splits.json"
 

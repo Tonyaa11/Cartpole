@@ -22,21 +22,17 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from pathlib import Path
 from typing import Dict, List, Sequence
 
 import numpy as np
 import pandas as pd
 
-from common import ROOT_DIR
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w3.common import ROOT_DIR
 
-# Make the Workshop 1 modules (dataset.py, features.py) importable. They are
-# APPENDED to the path so that Workshop 3 modules keep priority.
-_W1_SRC = ROOT_DIR / "src"
-if str(_W1_SRC) not in sys.path:
-    sys.path.append(str(_W1_SRC))
-
-import dataset as w1_dataset    # noqa: E402  (Workshop 1)
-import features as w1_features  # noqa: E402  (Workshop 1)
+import w1.dataset as w1_dataset    # noqa: E402  (Workshop 1)
+import w1.features as w1_features  # noqa: E402  (Workshop 1)
 
 
 def _load_w1_baselines():
@@ -45,7 +41,7 @@ def _load_w1_baselines():
     Returns:
         module: The Workshop 1 baselines module.
     """
-    spec = importlib.util.spec_from_file_location("w1_baselines", _W1_SRC / "baselines.py")
+    spec = importlib.util.spec_from_file_location("w1_baselines", ROOT_DIR / "src" / "w1" / "baselines.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

@@ -58,9 +58,13 @@ from sklearn.metrics import (
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.tensorboard import SummaryWriter
 
-from dataset import EPISODE_COL, ROOT_DIR, SEED, get_or_create_splits, load_raw, load_splits
-from model import FailurePredictor, build_model
-from sequences import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import EPISODE_COL, ROOT_DIR, SEED, get_or_create_splits, load_raw, load_splits
+from w2.model import FailurePredictor, build_model
+from w2.sequences import (
     MODE_ENGINEERED,
     MODE_RAW,
     build_all_partitions,

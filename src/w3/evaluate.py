@@ -35,11 +35,15 @@ from typing import Any, Dict, List
 import numpy as np
 import torch
 
-from agent import DQNAgent
-from baselines import Policy, make_baselines
-from common import CKPT_DIR, ROOT_DIR, RUNS_DIR, TEST_SEEDS, load_json, save_json
-from env import MAX_STEPS, make_env
-from w1_bridge import W1DangerModel
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w3.agent import DQNAgent
+from w1.baselines import Policy, make_baselines
+from w3.common import CKPT_DIR, ROOT_DIR, RUNS_DIR, TEST_SEEDS, load_json, save_json
+from w3.env import MAX_STEPS, make_env
+from w3.w1_bridge import W1DangerModel
 
 NOISY_FORCE_STD = 2.0      # Newtons (20 % of the nominal force)
 N_TRAJECTORIES = 4         # example episodes saved for the figures

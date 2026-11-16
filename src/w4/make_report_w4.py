@@ -26,7 +26,11 @@ from typing import Dict, List
 
 import pandas as pd
 
-from w4_common import GEN_DIR, RUNS_DIR, TrainConfig, load_json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w4.w4_common import GEN_DIR, RUNS_DIR, TrainConfig, load_json
 
 
 def f3(v: float) -> str:

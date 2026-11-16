@@ -28,8 +28,12 @@ import numpy as np
 import torch
 from torch.nn.utils.rnn import pack_padded_sequence
 
-from model import FailurePredictor, build_model
-from w4_common import PARTITIONS, W2_CKPT, W4Data, w2_windows
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w2.model import FailurePredictor, build_model
+from w4.w4_common import PARTITIONS, W2_CKPT, W4Data, w2_windows
 
 
 def load_w2(path: Path = W2_CKPT) -> Tuple[FailurePredictor, Dict]:

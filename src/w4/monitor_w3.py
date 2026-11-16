@@ -54,22 +54,18 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_curve
 
-# Workshop 3 modules first on the path: they include names (baselines, common)
-# that also exist in this folder with a different meaning.
-_W3_SRC = Path(__file__).resolve().parent.parent / "workshop3" / "src"
-if str(_W3_SRC) not in sys.path:
-    sys.path.insert(0, str(_W3_SRC))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agent import DQNAgent  # noqa: E402  (Workshop 3)
-from baselines import make_baselines  # noqa: E402  (Workshop 3)
-from common import TEST_SEEDS  # noqa: E402  (Workshop 3)
-from env import make_env  # noqa: E402  (Workshop 3)
-from w1_bridge import W1DangerModel  # noqa: E402  (Workshop 3 -> Workshop 1)
-from w2_bridge import W2DangerModel  # noqa: E402  (Workshop 3 -> Workshop 2)
+from w3.agent import DQNAgent  # noqa: E402  (Workshop 3)
+from w1.baselines import make_baselines  # noqa: E402  (Workshop 3)
+from w3.common import TEST_SEEDS  # noqa: E402  (Workshop 3)
+from w3.env import make_env  # noqa: E402  (Workshop 3)
+from w3.w1_bridge import W1DangerModel  # noqa: E402  (Workshop 3 -> Workshop 1)
+from w4.w2_bridge import W2DangerModel  # noqa: E402  (Workshop 3 -> Workshop 2)
 
-import autoencoder as ae  # noqa: E402  (Workshop 4)
-from features import build_features  # noqa: E402
-from w4_common import (  # noqa: E402
+from w4 import autoencoder as ae  # noqa: E402  (Workshop 4)
+from w1.features import build_features  # noqa: E402
+from w4.w4_common import (  # noqa: E402
     CKPT_DIR,          # workshop4 checkpoints
     COLORS,
     RUNS_DIR,

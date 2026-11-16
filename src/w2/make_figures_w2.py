@@ -42,10 +42,14 @@ from sklearn.metrics import (
     roc_curve,
 )
 
-from dataset import ROOT_DIR, load_raw, load_splits
-from model import build_model
-from sequences import build_all_partitions
-from train_lstm import evaluate_loader, make_loaders, set_global_seed
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import ROOT_DIR, load_raw, load_splits
+from w2.model import build_model
+from w2.sequences import build_all_partitions
+from w2.train_lstm import evaluate_loader, make_loaders, set_global_seed
 
 FIG_DIR = ROOT_DIR / "report" / "figures"
 RUNS_DIR = ROOT_DIR / "runs" / "workshop2"

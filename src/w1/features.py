@@ -18,12 +18,15 @@ Golden rules
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import List
 
 import numpy as np
 import pandas as pd
 
-from dataset import EPISODE_COL, RAW_FEATURE_COLS
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import EPISODE_COL, RAW_FEATURE_COLS
 
 # Standard CartPole termination thresholds (domain constants)
 THETA_LIMIT = 0.2095  # radians (~12 degrees)

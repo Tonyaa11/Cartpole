@@ -29,9 +29,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -49,7 +50,8 @@ from sklearn.metrics import (
 )
 from sklearn.utils.class_weight import compute_sample_weight
 
-from dataset import (
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import (
     RAW_FEATURE_COLS,
     ROOT_DIR,
     SEED,
@@ -62,7 +64,7 @@ from dataset import (
     set_global_seed,
     subset,
 )
-from features import build_features
+from w1.features import build_features
 
 RUNS_DIR = ROOT_DIR / "runs" / "workshop1"
 
@@ -287,13 +289,7 @@ if __name__ == "__main__":
 # Workshop 3 — RL Policy Baselines
 # =============================================================================
 
-from __future__ import annotations
-
-from typing import List, Optional
-
-import numpy as np
-
-from env import FORCE_MAG, cartpole_dynamics
+from w3.env import FORCE_MAG, cartpole_dynamics  # noqa: E402
 
 
 class Policy:

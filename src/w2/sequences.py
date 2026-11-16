@@ -38,7 +38,11 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from dataset import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import (
     EPISODE_COL,
     RAW_FEATURE_COLS,
     TARGET_COL,

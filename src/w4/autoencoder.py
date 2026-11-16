@@ -38,6 +38,7 @@ in ``train_ae.py`` and the framework-independent utilities in ``w4_common.py``.
 from __future__ import annotations
 
 import random
+import sys
 import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -48,7 +49,8 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from w4_common import TrainConfig
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w4.w4_common import TrainConfig  # noqa: E402
 
 LOGVAR_CLAMP = (-10.0, 10.0)  # numerical safety for exp(logvar)
 

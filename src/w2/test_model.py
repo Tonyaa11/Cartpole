@@ -24,10 +24,14 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from dataset import EPISODE_COL, RAW_FEATURE_COLS, ROOT_DIR, load_raw, load_splits
-from model import build_model
-from sequences import compute_features, window_episodes
-from train_lstm import set_global_seed
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import EPISODE_COL, RAW_FEATURE_COLS, ROOT_DIR, load_raw, load_splits
+from w2.model import build_model
+from w2.sequences import compute_features, window_episodes
+from w2.train_lstm import set_global_seed
 
 CKPT_PATH = ROOT_DIR / "checkpoints" / "workshop2" / "model_best.pt"
 

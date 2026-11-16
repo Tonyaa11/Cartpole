@@ -38,10 +38,14 @@ import pandas as pd
 from scipy.stats import wasserstein_distance
 from sklearn.metrics import precision_recall_curve, roc_auc_score, roc_curve
 
-import autoencoder as ae
-from features import THETA_LIMIT
-from w2_encoder import w2_infer
-from w4_common import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w4 import autoencoder as ae
+from w1.features import THETA_LIMIT
+from w4.w2_encoder import w2_infer
+from w4.w4_common import (
     CKPT_DIR,
     CKPT_RUNS_DIR,
     COLORS,

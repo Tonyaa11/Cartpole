@@ -29,8 +29,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-from baselines import best_f1_threshold, fit_model, get_models, prepare_data
-from dataset import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.baselines import best_f1_threshold, fit_model, get_models, prepare_data
+from w1.dataset import (
     EPISODE_COL,
     RAW_FEATURE_COLS,
     ROOT_DIR,

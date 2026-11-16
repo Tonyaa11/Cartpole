@@ -27,8 +27,8 @@ from pathlib import Path
 import pandas as pd
 
 # Allow "python dataset_info.py" from the repository root
-sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from dataset import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w1.dataset import (  # noqa: E402
     EPISODE_COL,
     RAW_CSV,
     RAW_FEATURE_COLS,

@@ -48,8 +48,12 @@ from typing import Dict, List
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
-import autoencoder as ae
-from w4_common import (
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w4 import autoencoder as ae
+from w4.w4_common import (
     CKPT_DIR,
     CKPT_RUNS_DIR,
     REGIME_ALL,

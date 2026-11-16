@@ -27,6 +27,7 @@ Usage
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -37,11 +38,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from common import FIG_DIR, RUNS_DIR, TRAIN_SEEDS, W3_DIR, load_json
-from env import CartPoleControlEnv
-from train import HALF_THRESHOLD, SOLVED_THRESHOLD
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from w3.common import CONFIG_FILE, RUNS_DIR, TRAIN_SEEDS, load_json
+from w3.env import CartPoleControlEnv
+from w3.train import HALF_THRESHOLD, SOLVED_THRESHOLD
 
-GEN_DIR = W3_DIR / "report" / "generated"
+FIG_DIR = RUNS_DIR / "figures"
+GEN_DIR = RUNS_DIR / "report" / "generated"
 W1_DATASET_STEPS = 35_874   # environment steps stored in the Workshop 1 dataset
 W1_TRAIN_ROWS = 24_782      # labelled rows used to train the Workshop 1 models
 
@@ -109,7 +112,7 @@ def load_val_curves() -> Dict[str, Dict[int, pd.DataFrame]]:
     Returns:
         Dict[str, Dict[int, pd.DataFrame]]: config -> seed -> validation log.
     """
-    sweep_cfg = load_json(W3_DIR / "configs" / "sweep.json")
+    sweep_cfg = load_json(CONFIG_FILE)
     curves: Dict[str, Dict[int, pd.DataFrame]] = {}
     for c in sweep_cfg["configs"]:
         for s in TRAIN_SEEDS:
@@ -209,7 +212,7 @@ def fig_training_curves(curves: Dict[str, Dict[int, pd.DataFrame]]) -> None:
 def fig_exploration(curves: Dict[str, Dict[int, pd.DataFrame]], best_cfg: str) -> None:
     """Epsilon schedules and how the validation episodes end during training."""
     fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.3))
-    sweep_cfg = load_json(W3_DIR / "configs" / "sweep.json")
+    sweep_cfg = load_json(CONFIG_FILE)
     decays = sorted({float({**sweep_cfg["defaults"], **c}["epsilon_decay"]) for c in sweep_cfg["configs"]})
     eps_min = sweep_cfg["defaults"]["epsilon_min"]
     episodes = np.arange(0, sweep_cfg["defaults"]["episodes"] + 1)
@@ -335,7 +338,7 @@ def pm(m: float, s: float, d: int = 1) -> str:
 def write_tex(diag, sweep, test, curves) -> None:
     """Write macros.tex, tab_sweep_rows.tex and tab_test_rows.tex."""
     GEN_DIR.mkdir(parents=True, exist_ok=True)
-    sweep_cfg = load_json(W3_DIR / "configs" / "sweep.json")
+    sweep_cfg = load_json(CONFIG_FILE)
     defaults = sweep_cfg["defaults"]
     best = sweep["best_config"]
     macros: Dict[str, str] = {}

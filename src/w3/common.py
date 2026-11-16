@@ -19,7 +19,7 @@ import numpy as np
 # --------------------------------------------------------------------------- #
 # Paths
 # --------------------------------------------------------------------------- #
-ROOT_DIR = Path(__file__).resolve().parent.parent     # repository root
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent  # repository root
 RUNS_DIR = ROOT_DIR / "runs" / "workshop3"            # logs (required location)
 CKPT_DIR = ROOT_DIR / "checkpoints" / "workshop3"     # checkpoints/workshop3/agent_best.pt
 SWEEP_CKPT_DIR = CKPT_DIR / "sweep"                   # per-run best checkpoints
