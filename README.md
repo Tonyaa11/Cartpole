@@ -126,10 +126,10 @@ Each workshop has a dedicated Colab notebook that clones the repository and runs
 │   └── workshop4/                     # ae_best.pt, vae_best.pt, ae_normal_best.pt,
 │                                      # vae_normal_best.pt, mlp_control.pt, w2_lstm_best.pt
 ├── runs/
-│   ├── workshop1/                     # baseline_results_*.csv / .json
-│   ├── workshop2/                     # train_log_*.csv, eval_*.json, comparison_*.csv, tb/
-│   ├── workshop3/                     # sweep_results.json, test_results.json, TensorBoard logs
-│   └── workshop4/                     # training_summary.csv, anomaly_results.json, latent_results.json
+│   ├── workshop1/                     # baseline_results_*.csv/.json, figures/
+│   ├── workshop2/                     # train_log_*.csv, eval_*.json, comparison_*.csv, tb/, figures/
+│   ├── workshop3/                     # sweep_results.json, test_results.json, figures/, generated/*.tex
+│   └── workshop4/                     # training_summary.csv, anomaly_results.json, figures/, generated/*.tex
 ├── configs/
 │   └── sweep.json                     # W3: 6 DQN hyperparameter configurations
 ├── reports/
@@ -238,6 +238,14 @@ python src/w2/make_figures_w2.py
 ```
 
 Saves `fig2-architecture.png`, `fig2-curves.png`, `fig2-confusion.png`, `fig2-roc-pr.png` and `fig2-comparison.png` to `runs/workshop2/figures/`.
+
+### Generate report figures (Workshop 1)
+
+```bash
+python src/w1/make_figures.py
+```
+
+Saves `fig-target-episodes.png`, `fig-distributions.png`, `fig-corr.png` and `fig-confusion.png` to `runs/workshop1/figures/`.
 
 Google Colab: open `notebooks/workshop2_colab.ipynb` and run all cells.
 

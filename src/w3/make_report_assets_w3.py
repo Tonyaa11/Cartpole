@@ -44,7 +44,7 @@ from w3.env import CartPoleControlEnv
 from w3.train import HALF_THRESHOLD, SOLVED_THRESHOLD
 
 FIG_DIR = RUNS_DIR / "figures"
-GEN_DIR = RUNS_DIR / "report" / "generated"
+GEN_DIR = RUNS_DIR / "generated"
 W1_DATASET_STEPS = 35_874   # environment steps stored in the Workshop 1 dataset
 W1_TRAIN_ROWS = 24_782      # labelled rows used to train the Workshop 1 models
 

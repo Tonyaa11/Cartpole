@@ -44,7 +44,7 @@ from w1.dataset import (
     set_global_seed,
 )
 
-FIG_DIR = ROOT_DIR / "report" / "figures"
+FIG_DIR = ROOT_DIR / "runs" / "workshop1" / "figures"
 PALETTE = ["#4C72B0", "#C44E52"]  # safe (blue) / danger (red)
 DPI = 200
 

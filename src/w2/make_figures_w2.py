@@ -51,7 +51,7 @@ from w2.model import build_model
 from w2.sequences import build_all_partitions
 from w2.train_lstm import evaluate_loader, make_loaders, set_global_seed
 
-FIG_DIR = ROOT_DIR / "report" / "figures"
+FIG_DIR = ROOT_DIR / "runs" / "workshop2" / "figures"
 RUNS_DIR = ROOT_DIR / "runs" / "workshop2"
 CKPT_PATH = ROOT_DIR / "checkpoints" / "workshop2" / "model_best.pt"
 W1_RESULTS = ROOT_DIR / "runs" / "workshop1" / "baseline_results_base.csv"
