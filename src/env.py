@@ -323,7 +323,7 @@ def make_env(shaping_scale: float = 0.0, gamma: float = 0.99, force_noise_std: f
 
 
 # --------------------------------------------------------------------------- #
-# Environment validation (run: python workshop3/src/env.py)
+# Environment validation (run: python src/env.py)
 # --------------------------------------------------------------------------- #
 def check_parity_with_gymnasium(n_episodes: int = 20, seed: int = 0) -> float:
     """Compare our transitions with Gymnasium CartPole-v1 step by step.

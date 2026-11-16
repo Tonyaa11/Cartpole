@@ -98,51 +98,43 @@ Colab already ships numpy, pandas, scikit-learn, matplotlib and seaborn, so no i
 │   ├── processed/
 │   └── splits.json
 ├── src/
-│   ├── dataset.py           # W1: loading, split, scaling, augmentation
-│   ├── features.py          # W1: 16 engineered features
-│   ├── baselines.py         # W1: the three supervised baselines
-│   ├── make_figures.py      # W1: report figures
-│   ├── model.py             # W2: LSTM/GRU architecture
-│   ├── sequences.py         # W2: past-only sliding windows
-│   ├── train.py             # W2: training loop + TensorBoard/CSV logs
-│   ├── evaluate.py          # W2: test evaluation + W1 comparison table
-│   ├── test_model.py        # W2: load checkpoint and run inference
-│   └── make_figures_w2.py   # W2: report figures
+│   ├── dataset.py               # W1: loading, split, scaling, augmentation
+│   ├── features.py              # W1: 16 engineered features
+│   ├── baselines.py             # W1+W3: ML supervised baselines + RL policy baselines
+│   ├── make_figures.py          # W1: report figures
+│   ├── model.py                 # W2: LSTM/GRU architecture
+│   ├── sequences.py             # W2: past-only sliding windows
+│   ├── train_lstm.py            # W2: LSTM training loop + TensorBoard/CSV logs
+│   ├── evaluate_lstm.py         # W2: LSTM test evaluation + W1 comparison table
+│   ├── test_model.py            # W2: load checkpoint and run inference
+│   ├── make_figures_w2.py       # W2: report figures
+│   ├── env.py                   # W3: custom Gymnasium environment
+│   ├── agent.py                 # W3: DQN agent
+│   ├── train.py                 # W3: DQN training loop + sweep
+│   ├── evaluate.py              # W3: DQN test evaluation
+│   ├── common.py                # W3: shared paths and seeds
+│   ├── w1_bridge.py             # W3: W1 classifier as controller
+│   └── make_report_assets_w3.py # W3: figures and LaTeX tables
 ├── notebooks/
-│   └── eda.ipynb
+│   ├── eda.ipynb                # W1: exploratory data analysis
+│   └── workshop3_colab.ipynb   # W3: step-by-step Colab runner
 ├── checkpoints/
-│   ├── model_best.pt        # W2: best model (highest validation F1)
-│   ├── agent_best.pt        # W3: best DQN agent (highest validation return)
-│   └── workshop3_sweep/     # W3: best checkpoint per config × seed
+│   ├── model_best.pt            # W2: best model (highest validation F1)
+│   ├── agent_best.pt            # W3: best DQN agent (highest validation return)
+│   └── workshop3_sweep/         # W3: best checkpoint per config × seed
 ├── runs/
-│   ├── baseline_results_*.csv       # W1 results
-│   ├── train_log_*.csv              # W2 per-epoch logs
-│   ├── train_summary_*.json         # W2 run summary
-│   ├── eval_*.json                  # W2 test metrics
-│   ├── comparison_*.csv             # W2 vs W1 table
-│   ├── tb/                          # W2 TensorBoard event files
-│   └── workshop3/                   # W3 TensorBoard logs, sweep & test results
-├── workshop3/
-│   ├── configs/sweep.json           # W3: 6 hyperparameter configurations
-│   ├── src/
-│   │   ├── env.py                   # W3: custom Gymnasium environment
-│   │   ├── agent.py                 # W3: DQN agent
-│   │   ├── baselines.py             # W3: 5 baseline policies
-│   │   ├── train.py                 # W3: training loop + sweep
-│   │   ├── evaluate.py              # W3: test evaluation
-│   │   ├── w1_bridge.py             # W3: W1 classifier as controller
-│   │   └── common.py                # W3: shared paths and seeds
-│   ├── notebooks/workshop3_colab.ipynb
-│   ├── report/
-│   │   ├── main.tex                 # W3 report (Overleaf source)
-│   │   ├── figures/                 # generated figures
-│   │   └── generated/               # generated LaTeX tables and macros
-│   └── requirements.txt
-├── report/
-│   ├── main.tex             # W1 report (Overleaf source)
-│   ├── main_w2.tex          # W2 report (Overleaf source)
-│   └── figures/
+│   ├── baseline_results_*.csv   # W1 results
+│   ├── train_log_*.csv          # W2 per-epoch logs
+│   ├── train_summary_*.json     # W2 run summary
+│   ├── eval_*.json              # W2 test metrics
+│   ├── comparison_*.csv         # W2 vs W1 table
+│   ├── tb/                      # W2 TensorBoard event files
+│   └── workshop3/               # W3 TensorBoard logs, sweep & test results
+├── configs/
+│   └── sweep.json               # W3: 6 hyperparameter configurations
 ├── group5_workshop1.pdf
+├── group5_workshop2.pdf
+├── group5_workshop3.pdf
 └── README.md
 ```
 
@@ -250,12 +242,12 @@ Prints the output shape and the parameter count of the architecture (default: 2-
 ### 6.2 Training
 
 ```bash
-python src/train.py                                  # default: LSTM, window 16, raw features
-python src/train.py --cell gru --window 16           # GRU variant
-python src/train.py --window 32                      # longer history
-python src/train.py --hidden 128                     # wider model
-python src/train.py --features engineered            # 16 engineered features per step
-python src/train.py --augment                        # noise augmentation (train only)
+python src/train_lstm.py                                  # default: LSTM, window 16, raw features
+python src/train_lstm.py --cell gru --window 16           # GRU variant
+python src/train_lstm.py --window 32                      # longer history
+python src/train_lstm.py --hidden 128                     # wider model
+python src/train_lstm.py --features engineered            # 16 engineered features per step
+python src/train_lstm.py --augment                        # noise augmentation (train only)
 ```
 
 This will:
@@ -278,7 +270,7 @@ tensorboard --logdir runs/tb
 ### 6.3 Test-Set Evaluation and Comparison with Workshop 1
 
 ```bash
-python src/evaluate.py
+python src/evaluate_lstm.py
 ```
 
 This will:
@@ -315,22 +307,22 @@ Saves five PNG files in `report/figures/`: `fig2-architecture.png` (model schema
 
 ```bash
 # 1. Validate the custom Gymnasium environment
-python workshop3/src/env.py
+python src/env.py
 
 # 2. Run the full hyperparameter sweep (6 configs × 3 seeds, ~20–40 min)
-python workshop3/src/train.py --sweep
+python src/train_rl.py --sweep
 
 # 3. Evaluate the best agent and all baselines on 100 test states
-python workshop3/src/evaluate.py
+python src/evaluate_rl.py
 
 # 4. Generate figures and LaTeX tables for the report
-python workshop3/src/make_report_assets.py
+python src/make_report_assets_w3.py
 
 # 5. Watch TensorBoard training curves
 tensorboard --logdir runs/workshop3 --port 6006
 ```
 
-Google Colab: open `workshop3/notebooks/workshop3_colab.ipynb` and run all cells.
+Google Colab: open `notebooks/workshop3_colab.ipynb` and run all cells.
 
 ---
 
@@ -349,7 +341,7 @@ Figures are saved by `src/make_figures.py` in `report/figures/`. Each CSV file h
 
 ---
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 All experiments are reproducible due to:
 
@@ -367,33 +359,33 @@ To reproduce the Workshop 1 results:
 
 Workshop 1 main result on the test set (60 episodes, threshold chosen on validation). Reference environment: Google Colab (scikit-learn 1.6.1, pandas 2.2.3, numpy 2.1.3); other library versions may change the Random Forest numbers slightly:
 
-| Model | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+| Model | Accuracy | Precision | Recall | F1-score | AUC-ROC |
 |---|---|---|---|---|---|
-| Logistic Regression | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
-| Random Forest | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
-| Gradient Boosting | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
+| Logistic Regression | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
 
 To reproduce the Workshop 2 results:
 
-1. `python src/train.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
-2. `python src/evaluate.py` (test metrics + comparison table)
+1. `python src/train_lstm.py` (rebuilds the windows from the same split, trains and saves `checkpoints/model_best.pt`)
+2. `python src/evaluate_lstm.py` (test metrics + comparison table)
 3. `python src/make_figures_w2.py` (report figures)
 4. Compare with `runs/eval_*.json` and `runs/comparison_*.csv`
 
 **Workshop 1 baselines vs. Workshop 2 deep model** (test set, threshold chosen on validation, seed 42):
 
-| Model | Workshop | Precision | Recall | F1 | ROC-AUC | PR-AUC |
+| Model | Workshop | Accuracy | Precision | Recall | F1-score | AUC-ROC |
 |---|---|---|---|---|---|---|
-| Logistic Regression | W1 | 0.669 | 0.703 | 0.686 | 0.981 | 0.791 |
-| Random Forest | W1 | 0.812 | 0.852 | 0.832 | 0.994 | 0.923 |
-| Gradient Boosting | W1 | 0.834 | 0.886 | 0.860 | 0.996 | 0.935 |
-| **Deep LSTM (window 16)** | **W2** | **0.812** | **0.924** | **0.865** | **0.997** | **0.956** |
+| Logistic Regression | W1 | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | W1 | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | W1 | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
+| **Deep LSTM (window 16)** | **W2** | **0.984** | **0.812** | **0.924** | **0.865** | **0.997** |
 
 ---
 
 ## 9. Workshop 3: Reinforcement Learning Agent (DQN)
 
-See `workshop3/README.md` for the full run instructions.
+
 
 ### 9.1 MDP Definition
 
@@ -440,14 +432,24 @@ See `workshop3/README.md` for the full run instructions.
 
 ### 9.4 Cross-Workshop Performance Summary
 
-| Model | Workshop | Task | Key metric | Value |
+W1 / W2 — failure prediction (test set, threshold on validation):
+
+| Model | Workshop | Accuracy | Precision | Recall | F1-score | AUC-ROC |
+|---|---|---|---|---|---|---|
+| Logistic Regression | W1 | 0.965 | 0.669 | 0.703 | 0.686 | 0.981 |
+| Random Forest | W1 | 0.981 | 0.812 | 0.852 | 0.832 | 0.994 |
+| Gradient Boosting | W1 | 0.984 | 0.834 | 0.886 | 0.860 | 0.996 |
+| Deep LSTM (window 16) | W2 | 0.984 | 0.812 | 0.924 | 0.865 | 0.997 |
+
+W3 — failure avoidance / control (100 held-out initial states):
+
+| Model | Workshop | Mean return | Episode length | Success rate |
 |---|---|---|---|---|
-| Logistic Regression | W1 | Failure prediction | F1 | 0.686 |
-| Random Forest | W1 | Failure prediction | F1 | 0.832 |
-| Gradient Boosting | W1 | Failure prediction | F1 | 0.860 |
-| Deep LSTM (window 16) | W2 | Failure prediction | F1 | 0.865 |
-| DQN (nominal) | W3 | Failure avoidance | Success rate | 97 % |
-| DQN (noisy) | W3 | Failure avoidance | Success rate | 49 % |
+| Random policy | W3 baseline | 20.7 | 20.7 | 0 % |
+| PD rule (heuristic) | W3 baseline | 500.0 | 500.0 | 100 % |
+| W1 classifier (look-ahead) | W3 baseline | 487.3 | 487.3 | 84 % |
+| **DQN — nominal** | **W3** | **498.1** | **498.1** | **97 %** |
+| **DQN — noisy (σ=2 N)** | **W3** | **370.9** | **370.9** | **49 %** |
 
 ---
 

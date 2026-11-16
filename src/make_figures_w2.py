@@ -45,7 +45,7 @@ from sklearn.metrics import (
 from dataset import ROOT_DIR, load_raw, load_splits
 from model import build_model
 from sequences import build_all_partitions
-from train import evaluate_loader, make_loaders, set_global_seed
+from train_lstm import evaluate_loader, make_loaders, set_global_seed
 
 FIG_DIR = ROOT_DIR / "report" / "figures"
 RUNS_DIR = ROOT_DIR / "runs"
@@ -237,7 +237,7 @@ def fig_roc_pr(y_true: np.ndarray, deep_scores: np.ndarray) -> None:
     Returns:
         None
     """
-    from baselines import fit_model, get_models, prepare_data
+    from baselines_ml import fit_model, get_models, prepare_data
 
     fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.2))
 
@@ -255,7 +255,7 @@ def fig_roc_pr(y_true: np.ndarray, deep_scores: np.ndarray) -> None:
     X_te, y_te = data["test"]
     assert (np.asarray(y_true) == np.asarray(y_te)).all(), "test rows differ!"
 
-    from baselines import best_f1_threshold
+    from baselines_ml import best_f1_threshold
 
     for name, model in get_models().items():
         model = fit_model(name, model, X_tr, y_tr)

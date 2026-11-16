@@ -1,211 +1,192 @@
 """
-Test-set evaluation of the trained deep model (Workshop 2).
+evaluate.py - Test-set evaluation of the best DQN agent against the baselines.
 
-Machine Learning - Workshop 2 (Advanced Learning Models, Part A)
+Machine Learning - Workshop 3 (Reinforcement Learning)
 
-What it does
-------------
-1. Loads ``checkpoints/model_best.pt`` (model weights + scaler + threshold
-   saved by ``src/train.py``) WITHOUT retraining anything.
-2. Rebuilds the same past-only windows of ``data/splits.json`` (same split,
-   same rows as Workshop 1) and runs inference on the held-out TEST episodes.
-3. Reports the SAME metrics as Workshop 1 (accuracy, precision, recall, F1,
-   ROC-AUC, PR-AUC, confusion matrix) at two thresholds:
-   * 0.5, and
-   * the threshold selected on the VALIDATION set during training.
-4. Loads ``runs/baseline_results_base.csv`` (Workshop 1) and prints a
-   comparison table: baselines vs. the deep model.
-5. Persists everything to ``runs/eval_<run_name>.csv|json``.
+Protocol
+--------
+* Test set: 100 held-out initial states (seeds 20000-20099), never used for
+  training, checkpoint selection or configuration selection.
+* Two test conditions:
+    - nominal : the same dynamics as in training;
+    - noisy   : Gaussian actuator noise of std 2 N (20 % of the 10 N force),
+                a perturbation the agent never saw during training.
+* Policies: the five baselines of ``baselines.py``, the selected agent
+  (``checkpoints/agent_best.pt``) and the best checkpoint of every seed of the
+  selected configuration (to report the variability across training seeds).
+* Metrics per policy: mean / std / median task return (= steps survived),
+  success rate (500 steps reached), share of failures by angle and by position,
+  W1 danger rate (share of steps the Workshop 1 classifier flags as dangerous),
+  mean |theta| (degrees) and mean |x| (meters).
+
+Outputs: ``runs/workshop3/test_results.json`` and ``runs/workshop3/trajectories.json``.
 
 Usage
 -----
-    python src/evaluate.py                       # best checkpoint
-    python src/evaluate.py --checkpoint checkpoints/model_best.pt
+    python src/evaluate_rl.py
 """
 
 from __future__ import annotations
 
-import argparse
-import json
-from pathlib import Path
+import math
+import time
+from typing import Any, Dict, List
 
 import numpy as np
-import pandas as pd
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    confusion_matrix,
-    f1_score,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
 
-from dataset import ROOT_DIR, load_raw, load_splits
-from model import build_model
-from sequences import build_all_partitions
-from train import best_f1_threshold, evaluate_loader, make_loaders, set_global_seed
+from agent import DQNAgent
+from baselines import Policy, make_baselines
+from common import CKPT_DIR, ROOT_DIR, RUNS_DIR, TEST_SEEDS, load_json, save_json
+from env import MAX_STEPS, make_env
+from w1_bridge import W1DangerModel
 
-RUNS_DIR = ROOT_DIR / "runs"
-CKPT_PATH = ROOT_DIR / "checkpoints" / "model_best.pt"
-W1_RESULTS = RUNS_DIR / "baseline_results_base.csv"
+NOISY_FORCE_STD = 2.0      # Newtons (20 % of the nominal force)
+N_TRAJECTORIES = 4         # example episodes saved for the figures
 
 
-def load_checkpoint(path: Path = CKPT_PATH) -> dict:
-    """Load a checkpoint dictionary (weights are loaded separately).
+class AgentPolicy(Policy):
+    """Wrap a trained DQN agent so it behaves like the baseline policies (greedy)."""
 
-    Args:
-        path (Path): Path to the ``.pt`` file.
+    def __init__(self, agent: DQNAgent, name: str):
+        """Args:
+            agent (DQNAgent): Trained agent.
+            name (str): Label for tables.
+        """
+        self.agent = agent
+        self.name = name
 
-    Returns:
-        dict: Checkpoint contents (``model_cfg``, ``window``, ``features``,
-        ``threshold``, ``seed``, ...).
-
-    Raises:
-        FileNotFoundError: If the checkpoint does not exist.
-    """
-    if not Path(path).exists():
-        raise FileNotFoundError(
-            f"Checkpoint not found: {path}. Train first: python src/train.py"
-        )
-    return torch.load(path, map_location="cpu", weights_only=False)
+    def act(self, obs: np.ndarray) -> int:
+        return self.agent.act(obs, epsilon=0.0)
 
 
-def evaluate(checkpoint_path: Path = CKPT_PATH) -> dict:
-    """Evaluate the saved model on the TEST split and compare with Workshop 1.
+def run_episode(policy: Policy, env, seed: int) -> Dict[str, Any]:
+    """Play one episode and record everything needed for the metrics.
 
     Args:
-        checkpoint_path (Path): Checkpoint to evaluate.
+        policy (Policy): Policy to run.
+        env: Environment instance.
+        seed (int): Reset seed (defines the initial state).
 
     Returns:
-        dict: ``{"deep": {...metrics...}, "comparison": DataFrame}``.
+        Dict[str, Any]: length, outcome, and the arrays of states, actions and
+        task rewards (state i is the one in which action i was taken).
     """
-    set_global_seed(42)
-    ckpt = load_checkpoint(checkpoint_path)
+    policy.reset()
+    obs, _ = env.reset(seed=seed)
+    states, actions, rewards = [], [], []
+    done = False
+    while not done:
+        a = policy.act(obs)
+        states.append(np.asarray(obs, dtype=np.float64))
+        actions.append(a)
+        obs, _, term, trunc, info = env.step(a)
+        rewards.append(info["task_reward"])
+        done = term or trunc
+    return {"seed": seed, "length": env.steps, "outcome": info["outcome"],
+            "states": np.array(states), "actions": actions, "rewards": rewards}
 
-    # Rebuild data with the SAME configuration stored in the checkpoint
-    df = load_raw()
-    splits = load_splits()
-    parts, _ = build_all_partitions(
-        df, splits, window=int(ckpt["window"]), mode=str(ckpt["features"])
-    )
-    loaders = make_loaders(parts, batch_size=256, seed=int(ckpt.get("seed", 42)))
 
-    model = build_model(ckpt["model_cfg"])
-    model.load_state_dict(ckpt["model_state"])
-    model.eval()
+def evaluate_policy(policy: Policy, seeds: List[int], force_noise_std: float,
+                    danger_model: W1DangerModel) -> Dict[str, Any]:
+    """Evaluate one policy on the test seeds under one condition.
 
-    criterion = torch.nn.BCEWithLogitsLoss()  # only for a comparable val loss
-    y_te, s_te, _ = evaluate_loader(model, loaders["test"], criterion, torch.device("cpu"))
-    y_va, s_va, _ = evaluate_loader(model, loaders["val"], criterion, torch.device("cpu"))
+    Args:
+        policy (Policy): Policy to evaluate.
+        seeds (List[int]): Test seeds (one episode each).
+        force_noise_std (float): Actuator noise (0 = nominal condition).
+        danger_model (W1DangerModel): Workshop 1 classifier for the danger rate.
 
-    # Threshold selected on VALIDATION (stored in the checkpoint; recomputed
-    # here as a consistency check - both must agree)
-    thr_stored = float(ckpt["threshold"])
-    thr_recomputed = best_f1_threshold(y_va, s_va)
-
-    def metrics(y, scores, thr) -> dict:
-        pred = scores >= thr
-        tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
-        return {
-            "threshold": float(thr),
-            "accuracy": accuracy_score(y, pred),
-            "precision": precision_score(y, pred, zero_division=0),
-            "recall": recall_score(y, pred, zero_division=0),
-            "f1": f1_score(y, pred, zero_division=0),
-            "roc_auc": roc_auc_score(y, scores),
-            "pr_auc": average_precision_score(y, scores),
-            "tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp),
-        }
-
-    deep = {
-        "model": "Deep LSTM (Workshop 2)" if ckpt["model_cfg"]["cell"] == "lstm"
-        else f"Deep {ckpt['model_cfg']['cell'].upper()} (Workshop 2)",
-        "run_name": ckpt.get("run_name", "model_best"),
-        "best_epoch": ckpt.get("best_epoch"),
-        "window": ckpt["window"],
-        "features": ckpt["features"],
-        "threshold_stored": thr_stored,
-        "threshold_recomputed": thr_recomputed,
-        "val_f1": metrics(y_va, s_va, thr_stored),
-        "test_at_0.5": metrics(y_te, s_te, 0.5),
-        "test_at_val_threshold": metrics(y_te, s_te, thr_stored),
+    Returns:
+        Dict[str, Any]: Aggregated metrics and per-episode lengths.
+    """
+    env = make_env(force_noise_std=force_noise_std)
+    episodes = [run_episode(policy, env, s) for s in seeds]
+    lengths = np.array([e["length"] for e in episodes], dtype=float)
+    outcomes = [e["outcome"] for e in episodes]
+    flagged, total = 0, 0
+    for e in episodes:                      # pooled W1 danger rate over all steps
+        p = danger_model.trajectory_proba(e["states"], e["actions"])
+        flagged += int(np.sum(p >= danger_model.threshold))
+        total += len(p)
+    all_states = np.concatenate([e["states"] for e in episodes])
+    return {
+        "policy": policy.name,
+        "mean_return": float(lengths.mean()), "std_return": float(lengths.std()),
+        "median_return": float(np.median(lengths)),
+        "success_rate": float(np.mean(lengths >= MAX_STEPS)),
+        "theta_failure_rate": float(np.mean([o == "failure_theta" for o in outcomes])),
+        "x_failure_rate": float(np.mean([o == "failure_x" for o in outcomes])),
+        "w1_danger_rate": flagged / total,
+        "mean_abs_theta_deg": float(np.degrees(np.mean(np.abs(all_states[:, 2])))),
+        "mean_abs_x": float(np.mean(np.abs(all_states[:, 0]))),
+        "lengths": lengths.astype(int).tolist(),
     }
 
-    # ---- Comparison with Workshop 1 -------------------------------------- #
-    rows = []
-    if W1_RESULTS.exists():
-        w1 = pd.read_csv(W1_RESULTS)
-        w1 = w1[w1["setting"] == "test @ val-threshold"]
-        for _, r in w1.iterrows():
-            rows.append(
-                {
-                    "model": r["model"], "workshop": "W1",
-                    "precision": r["precision"], "recall": r["recall"],
-                    "f1": r["f1"], "roc_auc": r["roc_auc"], "pr_auc": r["pr_auc"],
-                    "accuracy": r["accuracy"],
-                    "tn": int(r["tn"]), "fp": int(r["fp"]),
-                    "fn": int(r["fn"]), "tp": int(r["tp"]),
-                }
-            )
-    t = deep["test_at_val_threshold"]
-    rows.append(
-        {
-            "model": deep["model"], "workshop": "W2",
-            "precision": t["precision"], "recall": t["recall"], "f1": t["f1"],
-            "roc_auc": t["roc_auc"], "pr_auc": t["pr_auc"],
-            "accuracy": t["accuracy"],
-            "tn": t["tn"], "fp": t["fp"], "fn": t["fn"], "tp": t["tp"],
+
+def main() -> None:
+    """Run the whole test evaluation and save the results."""
+    torch.set_num_threads(1)
+    t0 = time.time()
+    sweep = load_json(RUNS_DIR / "sweep_results.json")
+    best_cfg = sweep["best_config"]
+    print("=" * 72)
+    print(f"TEST EVALUATION | selected configuration: {best_cfg} | {len(TEST_SEEDS)} episodes")
+    print("=" * 72)
+
+    print("Rebuilding the Workshop 1 classifier (used for the W1 danger rate)...")
+    danger = W1DangerModel()
+
+    # Policies: baselines + selected agent + every seed of the selected configuration
+    agent_best = DQNAgent.load(CKPT_DIR / "agent_best.pt")
+    policies: List[Policy] = make_baselines(danger) + [AgentPolicy(agent_best, "DQN (agent_best.pt)")]
+    seed_policies = []
+    for run in sweep["runs"]:
+        if run["config"] == best_cfg:
+            agent = DQNAgent.load(ROOT_DIR / run["checkpoint"])
+            seed_policies.append((run["seed"], AgentPolicy(agent, f"DQN seed {run['seed']}")))
+
+    results: Dict[str, Any] = {"best_config": best_cfg, "agent_best_info": agent_best.checkpoint_info,
+                               "noisy_force_std": NOISY_FORCE_STD, "conditions": {}}
+    for cond, noise in (("nominal", 0.0), ("noisy", NOISY_FORCE_STD)):
+        print(f"\n--- condition: {cond} (force noise std = {noise} N)")
+        rows = []
+        for pol in policies:
+            r = evaluate_policy(pol, TEST_SEEDS, noise, danger)
+            rows.append(r)
+            print(f"  {r['policy']:<28} return {r['mean_return']:6.1f} +- {r['std_return']:5.1f} | "
+                  f"success {r['success_rate']:5.0%} | x-fail {r['x_failure_rate']:4.0%} | "
+                  f"W1 danger {r['w1_danger_rate']:6.2%} | |theta| {r['mean_abs_theta_deg']:.2f} deg")
+        seed_rows = []
+        for seed, pol in seed_policies:
+            r = evaluate_policy(pol, TEST_SEEDS, noise, danger)
+            r["seed"] = seed
+            seed_rows.append(r)
+        means = [r["mean_return"] for r in seed_rows]
+        succ = [r["success_rate"] for r in seed_rows]
+        print(f"  DQN across seeds ({best_cfg}): return {np.mean(means):.1f} +- {np.std(means):.1f} | "
+              f"success {np.mean(succ):.0%} +- {np.std(succ):.0%}")
+        results["conditions"][cond] = {
+            "policies": rows, "seeds": seed_rows,
+            "dqn_seed_mean_return": float(np.mean(means)), "dqn_seed_std_return": float(np.std(means)),
+            "dqn_seed_mean_success": float(np.mean(succ)), "dqn_seed_std_success": float(np.std(succ)),
         }
-    )
-    comparison = pd.DataFrame(rows)
 
-    # ---- Console report --------------------------------------------------- #
-    print("=" * 78)
-    print(f"EVALUATION | checkpoint: {checkpoint_path}")
-    print(f"window={ckpt['window']} | features={ckpt['features']} | "
-          f"cell={ckpt['model_cfg']['cell']} | best epoch={ckpt.get('best_epoch')}")
-    print(f"threshold (val): stored {thr_stored:.4f} | recomputed {thr_recomputed:.4f}")
-    print("=" * 78)
-    for name, m in [("VAL ", deep["val_f1"]),
-                    ("TEST@0.5", deep["test_at_0.5"]),
-                    ("TEST@thr", deep["test_at_val_threshold"])]:
-        print(f"{name:>9}: acc {m['accuracy']:.3f} | P {m['precision']:.3f} | "
-              f"R {m['recall']:.3f} | F1 {m['f1']:.3f} | AUC {m['roc_auc']:.3f} | "
-              f"PR-AUC {m['pr_auc']:.3f} | [[{m['tn']} {m['fp']}] [{m['fn']} {m['tp']}]]")
+    # Example trajectories of the selected agent (nominal test condition)
+    env = make_env()
+    traj = []
+    for s in TEST_SEEDS[:N_TRAJECTORIES]:
+        e = run_episode(AgentPolicy(agent_best, "DQN"), env, s)
+        traj.append({"seed": s, "length": e["length"], "outcome": e["outcome"],
+                     "states": e["states"].tolist(), "actions": e["actions"], "rewards": e["rewards"]})
+    save_json({"episodes": traj}, RUNS_DIR / "trajectories.json")
 
-    print("\n--- Comparison (test @ validation threshold) ---")
-    print(
-        comparison[["model", "workshop", "precision", "recall", "f1",
-                    "roc_auc", "pr_auc"]]
-        .to_string(index=False, float_format=lambda v: f"{v:.3f}")
-    )
-
-    # ---- Persist ---------------------------------------------------------- #
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    tag = deep["run_name"]
-    out = {"checkpoint": str(checkpoint_path), **deep}
-    with open(RUNS_DIR / f"eval_{tag}.json", "w") as f:
-        json.dump(out, f, indent=2)
-    comparison.to_csv(RUNS_DIR / f"comparison_{tag}.csv", index=False)
-
-    print(f"\nresults -> {RUNS_DIR / f'eval_{tag}.json'}")
-    print(f"table   -> {RUNS_DIR / f'comparison_{tag}.csv'}")
-    return {"deep": deep, "comparison": comparison}
-
-
-def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
-    p = argparse.ArgumentParser(description="Evaluate the CartPole deep model")
-    p.add_argument("--checkpoint", type=Path, default=CKPT_PATH,
-                   help="path to the .pt checkpoint")
-    return p.parse_args()
+    results["w1_threshold"] = float(danger.threshold)
+    results["w1_train_samples"] = int(danger.n_train_samples)
+    results["eval_time_s"] = round(time.time() - t0, 1)
+    save_json(results, RUNS_DIR / "test_results.json")
+    print(f"\nSaved runs/workshop3/test_results.json and trajectories.json ({results['eval_time_s']:.0f}s)")
 
 
 if __name__ == "__main__":
-    evaluate(parse_args().checkpoint)
+    main()
