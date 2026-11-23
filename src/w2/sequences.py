@@ -26,7 +26,7 @@ Design decisions
 
 Usage
 -----
-    from sequences import build_sequences
+    from w2.sequences import build_sequences
     X, lengths, y, scaler = build_sequences(df, episodes, window=16)
 """
 
@@ -69,7 +69,7 @@ def compute_features(df: pd.DataFrame, mode: str = MODE_RAW) -> pd.DataFrame:
     if mode == MODE_RAW:
         return df[RAW_FEATURE_COLS].astype(float)
     if mode == MODE_ENGINEERED:
-        from features import build_features  # local import (features imports dataset)
+        from w1.features import build_features  # Workshop 1 engineered features
 
         return build_features(df)
     raise ValueError(f"unknown feature mode: {mode!r}")
@@ -236,7 +236,7 @@ def augment_rows(
     Returns:
         pd.DataFrame: Original rows plus the noisy copies.
     """
-    from dataset import augment_with_noise
+    from w1.dataset import augment_with_noise  # Workshop 1 noise augmentation
 
     return augment_with_noise(
         part, n_copies=n_copies, noise_scale=noise_scale, seed=seed

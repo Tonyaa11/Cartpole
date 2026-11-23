@@ -10,7 +10,7 @@
     "total_env_steps": 14381,
     "train_time_s": 26.4,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/eps_decay_0.995_s42.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/eps_decay_0.995_s42.pt"
   },
   "config": {
     "name": "eps_decay_0.995",

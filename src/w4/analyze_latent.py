@@ -7,10 +7,10 @@ Machine Learning - Workshop 4
 Representations compared (all computed on the TEST episodes)
 ------------------------------------------------------------
     * Input space   : the 16 standardised features (reference, no learning)
-    * AE            : bottleneck code of ``checkpoints/ae_best.pt``
-    * VAE           : posterior mean mu of ``checkpoints/vae_best.pt`` (not a sample)
+    * AE            : bottleneck code of ``checkpoints/workshop4/ae_best.pt``
+    * VAE           : posterior mean mu of ``checkpoints/workshop4/vae_best.pt`` (not a sample)
     * W2 LSTM       : frozen final hidden state (64-D) of the Workshop 2 deep
-                      LSTM (``checkpoints/w2_lstm_best.pt``, see ``w2_encoder.py``)
+                      LSTM (``checkpoints/workshop4/w2_lstm_best.pt``, see ``w2_encoder.py``)
     * MLP control   : bottleneck of a supervised MLP with the SAME trunk and
                       input as the AE (isolates the effect of the labels from the
                       temporal context the LSTM reads); table only
@@ -32,8 +32,8 @@ Outputs: ``runs/workshop4/latent_results.json`` and the figures
 
 Usage
 -----
-    python src/analyze_latent.py
-    python src/analyze_latent.py --no-umap      # skip UMAP (umap-learn missing)
+    python src/w4/analyze_latent.py
+    python src/w4/analyze_latent.py --no-umap      # skip UMAP (umap-learn missing)
 """
 
 from __future__ import annotations

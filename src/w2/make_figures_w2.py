@@ -4,8 +4,8 @@ make_figures_w2.py - Generate the Workshop 2 report figures as PNG files.
 Machine Learning - Workshop 2 (Advanced Learning Models, Part A)
 
 Every figure is computed from the real training logs (``runs/train_log_*.csv``),
-the real checkpoint (``checkpoints/model_best.pt``) and the real Workshop 1
-baselines (``runs/baseline_results_base.csv``); nothing is hard-coded.
+the real checkpoint (``checkpoints/workshop2/model_best.pt``) and the real Workshop 1
+baselines (``runs/workshop1/baseline_results_base.csv``); nothing is hard-coded.
 
 Files written to ``report/figures/`` (names expected by ``report/main_w2.tex``):
 
@@ -17,8 +17,8 @@ Files written to ``report/figures/`` (names expected by ``report/main_w2.tex``):
 
 Usage
 -----
-    python src/make_figures_w2.py
-    python src/make_figures_w2.py --run w2_gru_w16_raw   # other run
+    python src/w2/make_figures_w2.py
+    python src/w2/make_figures_w2.py --run w2_gru_w16_raw   # other run
 """
 
 from __future__ import annotations
@@ -241,7 +241,7 @@ def fig_roc_pr(y_true: np.ndarray, deep_scores: np.ndarray) -> None:
     Returns:
         None
     """
-    from baselines_ml import fit_model, get_models, prepare_data
+    from w1.baselines import fit_model, get_models, prepare_data  # Workshop 1 pipeline
 
     fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.2))
 
@@ -259,7 +259,7 @@ def fig_roc_pr(y_true: np.ndarray, deep_scores: np.ndarray) -> None:
     X_te, y_te = data["test"]
     assert (np.asarray(y_true) == np.asarray(y_te)).all(), "test rows differ!"
 
-    from baselines_ml import best_f1_threshold
+    from w1.baselines import best_f1_threshold
 
     for name, model in get_models().items():
         model = fit_model(name, model, X_tr, y_tr)
@@ -354,7 +354,7 @@ def main() -> None:
         fig_comparison(args.comparison)
     else:
         print(f"  WARNING: {args.comparison} not found "
-              "(run: python src/evaluate.py) - skipping comparison figure")
+              "(run: python src/w2/evaluate_lstm.py) - skipping comparison figure")
 
 
 if __name__ == "__main__":

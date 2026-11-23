@@ -13,11 +13,11 @@ states and never saw a failure label, so it is the kind of monitor one can deplo
 on a NEW controller whose failures have never been observed. This script tests
 that use case on the Workshop 3 policies.
 
-Protocol (re-uses the Workshop 3 code in ``workshop3/src``)
-----------------------------------------------------------
+Protocol (re-uses the Workshop 3 code in ``src/w3``)
+---------------------------------------------------
 * Policies: the four Workshop 3 baselines that do not query a failure model
   (random, alternating, angle rule, PD rule) and the selected DQN agent
-  (``checkpoints/agent_best.pt``).
+  (``checkpoints/workshop3/agent_best.pt``).
 * Conditions: nominal dynamics and actuator noise (std 2 N, as in Workshop 3),
   on the 100 held-out Workshop 3 test initial states.
 * Detectors, applied to every visited state:
@@ -36,11 +36,11 @@ Protocol (re-uses the Workshop 3 code in ``workshop3/src``)
   rate in episodes that never fail.
 
 Outputs: ``runs/workshop4/w3_monitoring.json`` and
-``report/workshop4/figures/fig-w4-w3-monitoring.png``.
+``runs/workshop4/figures/fig-w4-w3-monitoring.png``.
 
 Usage
 -----
-    python src/monitor_w3.py          # requires gymnasium (Workshop 3 environment)
+    python src/w4/monitor_w3.py       # requires gymnasium (Workshop 3 environment)
 """
 
 from __future__ import annotations
@@ -57,11 +57,11 @@ from sklearn.metrics import roc_curve
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from w3.agent import DQNAgent  # noqa: E402  (Workshop 3)
-from w1.baselines import make_baselines  # noqa: E402  (Workshop 3)
+from w3.baselines import make_baselines  # noqa: E402  (Workshop 3)
 from w3.common import TEST_SEEDS  # noqa: E402  (Workshop 3)
 from w3.env import make_env  # noqa: E402  (Workshop 3)
 from w3.w1_bridge import W1DangerModel  # noqa: E402  (Workshop 3 -> Workshop 1)
-from w4.w2_bridge import W2DangerModel  # noqa: E402  (Workshop 3 -> Workshop 2)
+from w3.w2_bridge import W2DangerModel  # noqa: E402  (Workshop 3 -> Workshop 2)
 
 from w4 import autoencoder as ae  # noqa: E402  (Workshop 4)
 from w1.features import build_features  # noqa: E402
@@ -104,7 +104,7 @@ class _DQNPolicy:
 
 
 def run_episode(policy, env, seed: int) -> Dict[str, Any]:
-    """Play one episode (same loop as ``workshop3/src/evaluate.py``).
+    """Play one episode (same loop as ``src/w3/evaluate.py``).
 
     Args:
         policy: Policy with ``reset`` and ``act``.

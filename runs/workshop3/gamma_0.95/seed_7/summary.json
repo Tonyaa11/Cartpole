@@ -10,7 +10,7 @@
     "total_env_steps": 26424,
     "train_time_s": 49.9,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/gamma_0.95_s7.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/gamma_0.95_s7.pt"
   },
   "config": {
     "name": "gamma_0.95",

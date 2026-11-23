@@ -20,16 +20,16 @@ What it does
    (``runs/train_log_<run_name>.csv``) so the learning curves can be
    reproduced without TensorBoard.
 5. Saves the BEST model (highest validation F1 at the validation-selected
-   threshold) to ``checkpoints/model_best.pt`` together with the scaler, the
+   threshold) to ``checkpoints/workshop2/model_best.pt`` together with the scaler, the
    window configuration and the selected threshold - everything needed to
    reload it in ``src/evaluate.py`` / ``src/test_model.py``.
 
 Usage
 -----
-    python src/train.py                       # default LSTM run
-    python src/train.py --cell gru --window 32
-    python src/train.py --features engineered  # 16 engineered features
-    python src/train.py --epochs 60 --lr 3e-3
+    python src/w2/train_lstm.py                          # default LSTM run
+    python src/w2/train_lstm.py --cell gru --window 32
+    python src/w2/train_lstm.py --features engineered    # 16 engineered features
+    python src/w2/train_lstm.py --epochs 60 --lr 3e-3
 """
 
 from __future__ import annotations
@@ -266,7 +266,7 @@ def _beats_best(path: Path, val_f1: float) -> bool:
     """Check whether a new validation F1 beats the checkpoint stored at ``path``.
 
     Used to decide if the current run deserves to be promoted to
-    ``checkpoints/model_best.pt``. Only the VALIDATION F1 is compared (the
+    ``checkpoints/workshop2/model_best.pt``. Only the VALIDATION F1 is compared (the
     test set never decides). A missing or unreadable checkpoint is always
     beaten.
 

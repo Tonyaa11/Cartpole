@@ -22,7 +22,7 @@ Everything here is computed from the files written by ``env.py``, ``train.py`` a
 
 Usage
 -----
-    python src/make_report_assets_w3.py
+    python src/w3/make_report_assets_w3.py
 """
 
 from __future__ import annotations
@@ -245,12 +245,20 @@ def fig_sample_efficiency(curves, best_cfg: str, test: Dict[str, Any]) -> None:
     ax.fill_between(grid / 1000, np.nanmin(Y, 0), np.nanmax(Y, 0), color=BLUE, alpha=0.15, linewidth=0)
     ax.plot(grid / 1000, np.nanmean(Y, 0), color=BLUE, label=f"DQN {best_cfg} (mean, min-max of 3 seeds)")
     pol = {p["policy"]: p for p in test["conditions"]["nominal"]["policies"]}
-    for name, col in (("PD rule (heuristic)", ORANGE), ("W1 classifier (look-ahead)", AQUA), ("Random", GRAY)):
+    # Baselines with the same test return share one line (e.g. PD rule and W2 LSTM at 500)
+    groups: Dict[float, List[str]] = {}
+    colors: Dict[float, str] = {}
+    for name, col in (("PD rule (heuristic)", ORANGE), ("W2 LSTM (look-ahead)", YELLOW),
+                      ("W1 classifier (look-ahead)", AQUA), ("Random", GRAY)):
         if name in pol:
-            ax.axhline(pol[name]["mean_return"], color=col, linestyle="--", linewidth=1.1,
-                       label=f"{name}: {pol[name]['mean_return']:.0f} (test, no training)")
+            m = round(pol[name]["mean_return"], 1)
+            groups.setdefault(m, []).append(name)
+            colors.setdefault(m, col)
+    for m, names in groups.items():
+        ax.axhline(m, color=colors[m], linestyle="--", linewidth=1.1,
+                   label=f"{' and '.join(names)}: {m:.0f} (test, no RL training)")
     ax.axvline(W1_DATASET_STEPS / 1000, color=INK2, linestyle=":", linewidth=1)
-    ax.text(W1_DATASET_STEPS / 1000, 440, "size of the W1 dataset (35,874 steps) ", color=INK2,
+    ax.text(W1_DATASET_STEPS / 1000, 440, "size of the W1/W2 dataset (35,874 steps) ", color=INK2,
             fontsize=6.5, va="top", ha="right")
     ax.set(xlabel="environment steps (thousands)", ylabel="smoothed validation return", ylim=(0, 520),
            xlim=(0, max(grid.max(), W1_DATASET_STEPS) / 1000 * 1.03))
@@ -414,13 +422,14 @@ def write_tex(diag, sweep, test, curves) -> None:
         name = f"\\textbf{{{name}}}" if p["policy"].startswith("DQN") else name
         rows.append(
             f"{name} & {pm(p['mean_return'], p['std_return'])} & {100 * p['success_rate']:.0f} & "
-            f"{100 * p['x_failure_rate']:.0f} & {100 * p['w1_danger_rate']:.2f} & {p['mean_abs_theta_deg']:.2f} & "
+            f"{100 * p['x_failure_rate']:.0f} & {100 * p['w1_danger_rate']:.2f} & {100 * p['w2_danger_rate']:.2f} & "
+            f"{p['mean_abs_theta_deg']:.2f} & "
             f"{pm(q['mean_return'], q['std_return'])} & {100 * q['success_rate']:.0f} \\\\ \\hline")
     seeds_n = test["conditions"]["nominal"]
     seeds_z = test["conditions"]["noisy"]
     rows.append(
         f"DQN, 3 seeds of {tex_escape(best)} & {pm(seeds_n['dqn_seed_mean_return'], seeds_n['dqn_seed_std_return'])} & "
-        f"{100 * seeds_n['dqn_seed_mean_success']:.0f} & -- & -- & -- & "
+        f"{100 * seeds_n['dqn_seed_mean_success']:.0f} & -- & -- & -- & -- & "
         f"{pm(seeds_z['dqn_seed_mean_return'], seeds_z['dqn_seed_std_return'])} & "
         f"{100 * seeds_z['dqn_seed_mean_success']:.0f} \\\\ \\hline")
     (GEN_DIR / "tab_test_rows.tex").write_text("\n".join(rows) + "\n")
@@ -434,13 +443,14 @@ def write_tex(diag, sweep, test, curves) -> None:
         mark = " (agent\\_best)" if r["seed"] == agent_seed else ""
         rows.append(
             f"{r['seed']}{mark} & {r['mean_return']:.1f} & {100 * r['success_rate']:.0f} & "
-            f"{100 * r['w1_danger_rate']:.2f} & {r['mean_abs_theta_deg']:.2f} & "
+            f"{100 * r['w1_danger_rate']:.2f} & {100 * r['w2_danger_rate']:.2f} & {r['mean_abs_theta_deg']:.2f} & "
             f"{q['mean_return']:.1f} & {100 * q['success_rate']:.0f} \\\\ \\hline")
     (GEN_DIR / "tab_seed_rows.tex").write_text("\n".join(rows) + "\n")
 
     pol = {p["policy"]: p for p in nom["policies"]}
     key = {"Random": "Rand", "Alternating (fixed)": "Alt", "Angle rule (greedy)": "Angle",
-           "PD rule (heuristic)": "PD", "W1 classifier (look-ahead)": "WOne", "DQN (agent_best.pt)": "DQN"}
+           "PD rule (heuristic)": "PD", "W1 classifier (look-ahead)": "WOne",
+           "W2 LSTM (look-ahead)": "WTwo", "DQN (agent_best.pt)": "DQN"}
     for name, k in key.items():
         if name in pol:
             p, q = pol[name], noisy[name]
@@ -448,12 +458,14 @@ def write_tex(diag, sweep, test, curves) -> None:
                 f"Test{k}Mean": f"{p['mean_return']:.1f}", f"Test{k}Std": f"{p['std_return']:.1f}",
                 f"Test{k}Success": f"{100 * p['success_rate']:.0f}",
                 f"Test{k}Danger": f"{100 * p['w1_danger_rate']:.2f}",
+                f"Test{k}DangerWTwo": f"{100 * p['w2_danger_rate']:.2f}",
                 f"Test{k}Theta": f"{p['mean_abs_theta_deg']:.2f}", f"Test{k}AbsX": f"{p['mean_abs_x']:.2f}",
                 f"Test{k}XFail": f"{100 * p['x_failure_rate']:.0f}",
                 f"Noisy{k}Mean": f"{q['mean_return']:.1f}", f"Noisy{k}Success": f"{100 * q['success_rate']:.0f}",
                 f"Noisy{k}XFail": f"{100 * q['x_failure_rate']:.0f}",
                 f"Noisy{k}ThetaFail": f"{100 * q['theta_failure_rate']:.0f}",
                 f"Noisy{k}Danger": f"{100 * q['w1_danger_rate']:.2f}",
+                f"Noisy{k}DangerWTwo": f"{100 * q['w2_danger_rate']:.2f}",
             })
     macros.update({
         "SeedsTestMean": f"{seeds_n['dqn_seed_mean_return']:.1f}", "SeedsTestStd": f"{seeds_n['dqn_seed_std_return']:.1f}",
@@ -461,6 +473,7 @@ def write_tex(diag, sweep, test, curves) -> None:
         "SeedsTestSuccess": f"{100 * seeds_n['dqn_seed_mean_success']:.0f}",
         "SeedsNoisySuccess": f"{100 * seeds_z['dqn_seed_mean_success']:.0f}",
         "NoiseStd": f"{test['noisy_force_std']:g}", "WOneThreshold": f"{test['w1_threshold']:.3f}",
+        "WTwoThreshold": f"{test['w2_threshold']:.3f}",
         "LR": f"{defaults['learning_rate']:g}", "DiscountGamma": f"{defaults['gamma']:g}",
         "EpsDecay": f"{defaults['epsilon_decay']:g}", "EpsMin": f"{defaults['epsilon_min']:g}",
         "Buffer": fmt_int(defaults["buffer_size"]), "Batch": str(defaults["batch_size"]),
@@ -477,7 +490,16 @@ def write_tex(diag, sweep, test, curves) -> None:
         macros.update({"WOneFOne": f"{gb['f1']:.3f}", "WOneRecall": f"{gb['recall']:.3f}",
                        "WOnePrecision": f"{gb['precision']:.3f}", "WOnePRAUC": f"{gb['pr_auc']:.3f}"})
 
-    lines = ["% Generated by src/make_report_assets_w3.py -- do not edit by hand"]
+    # Workshop 2 results (read from the W2 evaluation file of the repository)
+    w2_file = RUNS_DIR.parent / "workshop2" / f"eval_{test.get('w2_run_name', 'w2_lstm_w16_raw')}.json"
+    if w2_file.exists():
+        w2 = load_json(w2_file)
+        m = w2["test_at_val_threshold"]
+        macros.update({"WTwoFOne": f"{m['f1']:.3f}", "WTwoRecall": f"{m['recall']:.3f}",
+                       "WTwoPrecision": f"{m['precision']:.3f}", "WTwoPRAUC": f"{m['pr_auc']:.3f}",
+                       "WTwoWindow": str(w2["window"])})
+
+    lines = ["% Generated by src/w3/make_report_assets_w3.py -- do not edit by hand"]
     lines += [f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in macros.items()]
     (GEN_DIR / "macros.tex").write_text("\n".join(lines) + "\n")
     print(f"  wrote generated/macros.tex ({len(macros)} values), tab_sweep_rows.tex, "

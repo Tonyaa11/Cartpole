@@ -184,7 +184,7 @@ time limit is a success.
 \section{Environment Implementation and Validation}
 
 \subsection{Implementation}
-\texttt{CartPoleControlEnv} (\texttt{workshop3/src/env.py}) subclasses
+\texttt{CartPoleControlEnv} (\texttt{src/w3/env.py}) subclasses
 \texttt{gymnasium.Env} \cite{towers2024}. It declares
 \texttt{action\_space = Discrete(2)} and a 4-dimensional \texttt{Box} observation
 space, implements \texttt{reset()} (random initial state from the seeded generator)
@@ -277,7 +277,7 @@ Every \EvalEvery\ episodes the agent is evaluated greedily ($\epsilon = 0$) on t
 validation episodes. We report the mean validation return and its moving average over
 the last three evaluations (smoothed validation return), and keep the checkpoint with
 the highest validation return of each run. The best run of the selected configuration
-is saved as \texttt{checkpoints/agent\_best.pt}.
+is saved as \texttt{checkpoints/workshop3/agent\_best.pt}.
 
 %% ======================================================================
 \section{Hyperparameter Search}
@@ -366,7 +366,7 @@ need no RL training:
 \item \textbf{Angle rule (greedy):} push towards the side the pole leans.
 \item \textbf{PD rule (heuristic):} push towards the sign of $\theta + 0.5\,\dot\theta$; the gain was chosen on the validation episodes.
 \item \textbf{W1 classifier (look-ahead):} the Workshop~1 Gradient Boosting classifier used as a policy. For each action, the known dynamics give the next state and the classifier scores its probability of danger; the action with the lower probability is chosen. Unlike DQN, it uses a model of the dynamics.
-\item \textbf{W2 LSTM (look-ahead):} the same rule with the Workshop~2 model, a 2-layer LSTM that reads the last \WTwoWindow\ steps of the episode (states and the actions actually taken). The candidate step carries the action that leads to it, because the action that will be taken there is not known yet. The model is loaded from \texttt{checkpoints/model\_best.pt} without retraining; on the Workshop~2 test episodes our bridge reproduces its reported test F1 exactly.
+\item \textbf{W2 LSTM (look-ahead):} the same rule with the Workshop~2 model, a 2-layer LSTM that reads the last \WTwoWindow\ steps of the episode (states and the actions actually taken). The candidate step carries the action that leads to it, because the action that will be taken there is not known yet. The model is loaded from \texttt{checkpoints/workshop2/model\_best.pt} without retraining; on the Workshop~2 test episodes our bridge reproduces its reported test F1 exactly.
 \end{itemize}
 
 Besides the return, we report the success rate (500 steps reached), the share of
@@ -418,12 +418,14 @@ LSTM \TestDQNDangerWTwo\%. Both policies maximise the task reward equally, but t
 has a much smaller safety margin, and the noisy test exposes it: its return drops to
 \NoisyDQNMean\ with \NoisyDQNSuccess\% success, and \NoisyDQNThetaFail\% of the episodes
 end because the pole falls. The PD rule (\NoisyPDMean) and the W1-guided policy
-(\NoisyWOneMean) degrade less, mostly through cart drift. The W2-guided policy is the
+(\NoisyWOneMean) degrade less: the PD rule loses episodes through cart drift
+(\NoisyPDXFail\% end at the track limit), the W1-guided policy mostly because the pole
+falls (\NoisyWOneThetaFail\%). The W2-guided policy is the
 most robust of all: \NoisyWTwoMean\ steps with \NoisyWTwoSuccess\% success under noise,
 keeping the pole within a mean $|\theta|$ of \TestWTwoTheta$^\circ$ in the nominal test.
 
 Table~\ref{tab:seeds} shows that this fragility belongs to the selected checkpoint,
-not to the configuration: the other two seeds have both danger rates below 0.1\% and
+not to the configuration: the other two seeds have both danger rates below 0.2\% and
 keep most of their performance under noise. Among these three agents the danger rates,
 measured in the nominal condition, identified the fragile one, whereas the validation
 return, equal to 500 for the three, could not. We note this as an observation on three
@@ -568,11 +570,13 @@ reward functions that value safety margins explicitly, and stabilised variants o
 
 \section*{Reproducibility}
 Code, configurations, logs and checkpoints are available at
-\url{https://github.com/Tonyaa11/Cartpole} (folder \texttt{workshop3/}). All numbers and
-figures of this report are generated from the logs by
-\texttt{workshop3/src/make\_report\_assets.py}; seeds are fixed (training 42, 7, 99;
-validation 10000--10009; test 20000--20099). Neural-network training can differ slightly
-across library versions and hardware.
+\url{https://github.com/Tonyaa11/Cartpole} (code in \path{src/w3/}, configurations in
+\path{configs/sweep.json}, logs in \path{runs/workshop3/}, checkpoints in
+\path{checkpoints/workshop3/}). All numbers and figures of this report are generated
+from the logs by \path{src/w3/make_report_assets_w3.py}; seeds are fixed (training
+42, 7, 99; validation 10000--10009; test 20000--20099). The Workshop~1 classifier is
+refitted with scikit-learn 1.6.1, the version of the Workshop~1 report. Neural-network
+training can differ slightly across library versions and hardware.
 
 \begin{thebibliography}{00}
 \bibitem{sutton2018} R. S. Sutton and A. G. Barto, \emph{Reinforcement Learning: An Introduction}, 2nd ed. Cambridge, MA, USA: MIT Press, 2018.

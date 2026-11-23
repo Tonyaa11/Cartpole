@@ -23,19 +23,19 @@ Outputs
     runs/workshop4/<run>/history.csv     per-epoch train/val losses
     runs/workshop4/<run>/summary.json    best epoch and validation metrics
     runs/workshop4/<run>/tb/             TensorBoard logs (if installed)
-    runs/workshop4/training_summary.csv  one row per run
-    runs/workshop4/selection.json        selected z* and beta*
-    checkpoints/workshop4/<run>.pt       every trained model
-    checkpoints/ae_best.pt               AE  (z*, all rows)
-    checkpoints/vae_best.pt              VAE (z*, beta*, all rows)
-    checkpoints/ae_normal_best.pt        AE  (z*, normal rows)  - anomaly detection
-    checkpoints/vae_normal_best.pt       VAE (z*, beta*, normal rows)
-    checkpoints/mlp_control.pt           supervised MLP control (same trunk as the AE)
+    runs/workshop4/training_summary.csv          one row per run
+    runs/workshop4/selection.json                selected z* and beta*
+    checkpoints/workshop4/<run>.pt               every trained model
+    checkpoints/workshop4/ae_best.pt             AE  (z*, all rows)
+    checkpoints/workshop4/vae_best.pt            VAE (z*, beta*, all rows)
+    checkpoints/workshop4/ae_normal_best.pt      AE  (z*, normal rows)  - anomaly detection
+    checkpoints/workshop4/vae_normal_best.pt     VAE (z*, beta*, normal rows)
+    checkpoints/workshop4/mlp_control.pt         supervised MLP control (same trunk as the AE)
 
 Usage
 -----
-    python src/train_ae.py               # full experiment (~5-10 min on CPU)
-    python src/train_ae.py --epochs 3    # quick smoke test
+    python src/w4/train_ae.py               # full experiment (~5-10 min on CPU)
+    python src/w4/train_ae.py --epochs 3    # quick smoke test
 """
 
 from __future__ import annotations

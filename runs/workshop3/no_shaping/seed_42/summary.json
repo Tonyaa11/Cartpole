@@ -10,7 +10,7 @@
     "total_env_steps": 23887,
     "train_time_s": 38.0,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/no_shaping_s42.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/no_shaping_s42.pt"
   },
   "config": {
     "name": "no_shaping",

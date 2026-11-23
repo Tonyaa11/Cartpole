@@ -8,18 +8,18 @@ One *run* = one configuration trained with one seed:
       per environment step, decay epsilon at the end of the episode;
     * every ``eval_every`` episodes: greedy evaluation (epsilon = 0) on the 10
       fixed VALIDATION initial states; the checkpoint with the highest validation
-      return is kept (``checkpoints/workshop3_sweep/<config>_s<seed>.pt``).
+      return is kept (``checkpoints/workshop3/sweep/<config>_s<seed>.pt``).
 
 The *sweep* trains every configuration in ``configs/sweep.json`` with the three
 seeds (42, 7, 99), selects the best configuration on validation only, and copies
-its best run to ``checkpoints/agent_best.pt``. The test set is never touched here.
+its best run to ``checkpoints/workshop3/agent_best.pt``. The test set is never touched here.
 
 Usage
 -----
-    python src/train_rl.py --sweep                       # full sweep (5 configs x 3 seeds)
-    python src/train_rl.py --config reference --seed 42  # a single run
-    python src/train_rl.py --sweep --episodes 50         # quick smoke test
-    python src/train_rl.py --select-only                 # redo the selection from the logs
+    python src/w3/train.py --sweep                       # full sweep (6 configs x 3 seeds)
+    python src/w3/train.py --config reference --seed 42  # a single run
+    python src/w3/train.py --sweep --episodes 50         # quick smoke test
+    python src/w3/train.py --select-only                 # redo the selection from the logs
 """
 
 from __future__ import annotations
@@ -281,7 +281,7 @@ def run_sweep(config_names: Optional[List[str]] = None, episodes: Optional[int] 
 
 def finalize_sweep(config_names: Optional[List[str]] = None) -> None:
     """Gather the saved run summaries, select the best configuration and copy
-    its best checkpoint to ``checkpoints/agent_best.pt``.
+    its best checkpoint to ``checkpoints/workshop3/agent_best.pt``.
 
     Args:
         config_names (Optional[List[str]]): Configurations to include (default:
@@ -312,7 +312,7 @@ def finalize_sweep(config_names: Optional[List[str]] = None) -> None:
         print(f"{t['config']:>14}: best val {t['best_val_mean']:6.1f} +- {t['best_val_std']:5.1f} | "
               f"final val {t['final_val_mean']:6.1f} +- {t['final_val_std']:5.1f} | "
               f"runs reaching 475: {t['runs_reaching_475']}/3")
-    print(f"\nBest configuration: {sel['best_config']} -> checkpoints/agent_best.pt "
+    print(f"\nBest configuration: {sel['best_config']} -> checkpoints/workshop3/agent_best.pt "
           f"(seed {sel['best_run']['seed']}, val {sel['best_run']['best_val_return']:.1f})")
 
 

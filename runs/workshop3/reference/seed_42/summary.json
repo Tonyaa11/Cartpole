@@ -10,7 +10,7 @@
     "total_env_steps": 20824,
     "train_time_s": 37.0,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/reference_s42.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/reference_s42.pt"
   },
   "config": {
     "name": "reference",

@@ -3,7 +3,7 @@ Inference smoke test: load the saved checkpoint and predict on NEW data.
 
 Machine Learning - Workshop 2 (Advanced Learning Models, Part A)
 
-The script verifies that ``checkpoints/model_best.pt`` is self-contained: it
+The script verifies that ``checkpoints/workshop2/model_best.pt`` is self-contained: it
 rebuilds the scaler and the windows from the raw CSV (data never seen during
 training is used by default: the TEST episodes), loads the weights and runs a
 forward pass. It prints the predicted probability of failure-imminence for a
@@ -11,9 +11,9 @@ few sample windows and a summary over the whole set.
 
 Usage
 -----
-    python src/test_model.py                     # 5 example windows (test)
-    python src/test_model.py --n 20 --split val   # more examples, val split
-    python src/test_model.py --interactive        # type your own state row
+    python src/w2/test_model.py                     # 5 example windows (test)
+    python src/w2/test_model.py --n 20 --split val   # more examples, val split
+    python src/w2/test_model.py --interactive        # type your own state row
 """
 
 from __future__ import annotations
@@ -119,7 +119,7 @@ def predict_state_row(ckpt: dict, row: dict) -> float:
     """
     import pandas as pd
 
-    from sequences import compute_features
+    from w2.sequences import compute_features
 
     df = pd.DataFrame([row])
     feats = compute_features(df, str(ckpt["features"]))
@@ -151,7 +151,7 @@ def main() -> None:
     if not args.checkpoint.exists():
         raise SystemExit(
             f"Checkpoint not found: {args.checkpoint}\n"
-            "Train one first:  python src/train.py"
+            "Train one first:  python src/w2/train_lstm.py"
         )
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
 

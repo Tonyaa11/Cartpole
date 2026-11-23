@@ -10,7 +10,7 @@
     "total_env_steps": 28734,
     "train_time_s": 166.8,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/weight_decay_1e-4_s7.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/weight_decay_1e-4_s7.pt"
   },
   "config": {
     "name": "weight_decay_1e-4",

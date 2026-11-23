@@ -14,13 +14,17 @@ training set, decision threshold chosen on validation) and exposes two uses:
 2. ``danger_proba_candidates(...)``: probability of danger for the states reached
    by each action, used by the "W1-guided" baseline policy (one-step look-ahead).
 
-The Workshop 1 modules live in ``<repo>/src``. Workshop 3 also has a module named
-``baselines``, so the Workshop 1 one is loaded under the name ``w1_baselines``.
+The Workshop 1 modules live in ``src/w1`` (``dataset.py``, ``features.py`` and
+``baselines.py``) and are imported as a package, so they never clash with the
+Workshop 3 module of the same name (``src/w3/baselines.py``).
+
+Usage
+-----
+    python src/w3/w1_bridge.py      # rebuilds the model and checks the online features
 """
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from pathlib import Path
 from typing import Dict, List, Sequence
@@ -29,22 +33,9 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from w3.common import ROOT_DIR
-
+import w1.baselines as w1_baselines  # noqa: E402  (Workshop 1 models and threshold rule)
 import w1.dataset as w1_dataset    # noqa: E402  (Workshop 1)
 import w1.features as w1_features  # noqa: E402  (Workshop 1)
-
-
-def _load_w1_baselines():
-    """Import ``<repo>/src/baselines.py`` under the module name ``w1_baselines``.
-
-    Returns:
-        module: The Workshop 1 baselines module.
-    """
-    spec = importlib.util.spec_from_file_location("w1_baselines", ROOT_DIR / "src" / "w1" / "baselines.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 class W1DangerModel:
@@ -52,7 +43,7 @@ class W1DangerModel:
 
     def __init__(self) -> None:
         """Fit the W1 pipeline: features -> scaler (train) -> GB -> threshold (val)."""
-        w1 = _load_w1_baselines()
+        w1 = w1_baselines
         w1_dataset.set_global_seed()
         df = w1_dataset.load_raw()
         splits = w1_dataset.get_or_create_splits(df)

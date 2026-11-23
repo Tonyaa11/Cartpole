@@ -11,7 +11,7 @@
       "total_env_steps": 20824,
       "train_time_s": 37.0,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/reference_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/reference_s42.pt"
     },
     {
       "config": "reference",
@@ -24,7 +24,7 @@
       "total_env_steps": 21943,
       "train_time_s": 39.6,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/reference_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/reference_s7.pt"
     },
     {
       "config": "reference",
@@ -37,7 +37,7 @@
       "total_env_steps": 36500,
       "train_time_s": 128.2,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/reference_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/reference_s99.pt"
     },
     {
       "config": "lr_1e-4",
@@ -50,7 +50,7 @@
       "total_env_steps": 23265,
       "train_time_s": 38.8,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/lr_1e-4_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/lr_1e-4_s42.pt"
     },
     {
       "config": "lr_1e-4",
@@ -63,7 +63,7 @@
       "total_env_steps": 19993,
       "train_time_s": 34.5,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/lr_1e-4_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/lr_1e-4_s7.pt"
     },
     {
       "config": "lr_1e-4",
@@ -76,7 +76,7 @@
       "total_env_steps": 38342,
       "train_time_s": 66.0,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/lr_1e-4_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/lr_1e-4_s99.pt"
     },
     {
       "config": "gamma_0.95",
@@ -89,7 +89,7 @@
       "total_env_steps": 25680,
       "train_time_s": 47.1,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/gamma_0.95_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/gamma_0.95_s42.pt"
     },
     {
       "config": "gamma_0.95",
@@ -102,7 +102,7 @@
       "total_env_steps": 26424,
       "train_time_s": 49.9,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/gamma_0.95_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/gamma_0.95_s7.pt"
     },
     {
       "config": "gamma_0.95",
@@ -115,7 +115,7 @@
       "total_env_steps": 23933,
       "train_time_s": 41.7,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/gamma_0.95_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/gamma_0.95_s99.pt"
     },
     {
       "config": "eps_decay_0.995",
@@ -128,7 +128,7 @@
       "total_env_steps": 14381,
       "train_time_s": 26.4,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/eps_decay_0.995_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/eps_decay_0.995_s42.pt"
     },
     {
       "config": "eps_decay_0.995",
@@ -141,7 +141,7 @@
       "total_env_steps": 14036,
       "train_time_s": 24.0,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/eps_decay_0.995_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/eps_decay_0.995_s7.pt"
     },
     {
       "config": "eps_decay_0.995",
@@ -154,7 +154,7 @@
       "total_env_steps": 13519,
       "train_time_s": 25.1,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/eps_decay_0.995_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/eps_decay_0.995_s99.pt"
     },
     {
       "config": "weight_decay_1e-4",
@@ -167,7 +167,7 @@
       "total_env_steps": 31516,
       "train_time_s": 248.9,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/weight_decay_1e-4_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/weight_decay_1e-4_s42.pt"
     },
     {
       "config": "weight_decay_1e-4",
@@ -180,7 +180,7 @@
       "total_env_steps": 28734,
       "train_time_s": 166.8,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/weight_decay_1e-4_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/weight_decay_1e-4_s7.pt"
     },
     {
       "config": "weight_decay_1e-4",
@@ -193,7 +193,7 @@
       "total_env_steps": 30075,
       "train_time_s": 163.8,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/weight_decay_1e-4_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/weight_decay_1e-4_s99.pt"
     },
     {
       "config": "no_shaping",
@@ -206,7 +206,7 @@
       "total_env_steps": 23887,
       "train_time_s": 38.0,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/no_shaping_s42.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/no_shaping_s42.pt"
     },
     {
       "config": "no_shaping",
@@ -219,7 +219,7 @@
       "total_env_steps": 22181,
       "train_time_s": 34.8,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/no_shaping_s7.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/no_shaping_s7.pt"
     },
     {
       "config": "no_shaping",
@@ -232,7 +232,7 @@
       "total_env_steps": 24818,
       "train_time_s": 40.2,
       "n_parameters": 17410,
-      "checkpoint": "checkpoints/workshop3_sweep/no_shaping_s99.pt"
+      "checkpoint": "checkpoints/workshop3/sweep/no_shaping_s99.pt"
     }
   ],
   "table": [
@@ -309,6 +309,6 @@
     "total_env_steps": 36500,
     "train_time_s": 128.2,
     "n_parameters": 17410,
-    "checkpoint": "checkpoints/workshop3_sweep/reference_s99.pt"
+    "checkpoint": "checkpoints/workshop3/sweep/reference_s99.pt"
   }
 }

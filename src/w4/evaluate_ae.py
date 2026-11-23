@@ -26,7 +26,7 @@ Sections
 
 Usage
 -----
-    python src/evaluate_ae.py
+    python src/w4/evaluate_ae.py
 """
 
 from __future__ import annotations

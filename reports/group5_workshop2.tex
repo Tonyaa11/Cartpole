@@ -247,7 +247,7 @@ Fig.~\ref{fig:rocpr}).
 \hline
 \textbf{Model} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{ROC-AUC} & \textbf{PR-AUC} \\ \hline
 Logistic Regression & 0.669 & 0.703 & 0.686 & 0.981 & 0.791 \\ \hline
-Random Forest & 0.833 & 0.841 & 0.837 & 0.994 & 0.923 \\ \hline
+Random Forest & 0.812 & 0.852 & 0.832 & 0.994 & 0.923 \\ \hline
 Gradient Boosting & 0.834 & 0.886 & 0.860 & 0.996 & 0.935 \\ \hline
 \textbf{Deep LSTM (W2)} & \textbf{0.812} & \textbf{0.924} & \textbf{0.865} & \textbf{0.997} & \textbf{0.956} \\ \hline
 \end{tabular}
@@ -370,7 +370,7 @@ Code, split file and instructions are available at
 \url{https://github.com/Tonyaa11/Cartpole}. To reproduce the results:
 \texttt{python src/w2/train\_lstm.py}, then \texttt{python src/w2/evaluate\_lstm.py}, then
 \texttt{python src/w2/make\_figures\_w2.py} (Python 3.11.2, PyTorch 2.6.0 CPU,
-scikit-learn 1.8.0, seed 42). The per-epoch logs are in
+scikit-learn 1.6.1 as in Workshop~1, seed 42). The per-epoch logs are in
 \texttt{runs/workshop2/train\_log\_*.csv} and the comparison table in
 \texttt{runs/workshop2/comparison\_*.csv}.
 

@@ -25,7 +25,7 @@ Model
 
 Usage (smoke test: forward pass + parameter count)
 --------------------------------------------------
-    python src/model.py
+    python src/w2/model.py
 """
 
 from __future__ import annotations

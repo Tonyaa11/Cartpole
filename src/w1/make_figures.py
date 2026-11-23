@@ -15,7 +15,7 @@ expects, so after running this script the report shows the figures automatically
 
 Usage
 -----
-    python src/make_figures.py
+    python src/w1/make_figures.py
 """
 
 from __future__ import annotations

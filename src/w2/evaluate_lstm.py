@@ -5,7 +5,7 @@ Machine Learning - Workshop 2 (Advanced Learning Models, Part A)
 
 What it does
 ------------
-1. Loads ``checkpoints/model_best.pt`` (model weights + scaler + threshold
+1. Loads ``checkpoints/workshop2/model_best.pt`` (model weights + scaler + threshold
    saved by ``src/train.py``) WITHOUT retraining anything.
 2. Rebuilds the same past-only windows of ``data/splits.json`` (same split,
    same rows as Workshop 1) and runs inference on the held-out TEST episodes.
@@ -13,14 +13,14 @@ What it does
    ROC-AUC, PR-AUC, confusion matrix) at two thresholds:
    * 0.5, and
    * the threshold selected on the VALIDATION set during training.
-4. Loads ``runs/baseline_results_base.csv`` (Workshop 1) and prints a
+4. Loads ``runs/workshop1/baseline_results_base.csv`` (Workshop 1) and prints a
    comparison table: baselines vs. the deep model.
 5. Persists everything to ``runs/eval_<run_name>.csv|json``.
 
 Usage
 -----
-    python src/evaluate.py                       # best checkpoint
-    python src/evaluate.py --checkpoint checkpoints/model_best.pt
+    python src/w2/evaluate_lstm.py                       # best checkpoint
+    python src/w2/evaluate_lstm.py --checkpoint checkpoints/workshop2/model_best.pt
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def load_checkpoint(path: Path = CKPT_PATH) -> dict:
     """
     if not Path(path).exists():
         raise FileNotFoundError(
-            f"Checkpoint not found: {path}. Train first: python src/train.py"
+            f"Checkpoint not found: {path}. Train first: python src/w2/train_lstm.py"
         )
     return torch.load(path, map_location="cpu", weights_only=False)
 
@@ -189,7 +189,10 @@ def evaluate(checkpoint_path: Path = CKPT_PATH) -> dict:
     # ---- Persist ---------------------------------------------------------- #
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     tag = deep["run_name"]
-    out = {"checkpoint": str(checkpoint_path), **deep}
+    ckpt = Path(checkpoint_path).resolve()
+    # store the path relative to the repository (portable across machines)
+    ckpt_str = ckpt.relative_to(ROOT_DIR).as_posix() if ckpt.is_relative_to(ROOT_DIR) else str(ckpt)
+    out = {"checkpoint": ckpt_str, **deep}
     with open(RUNS_DIR / f"eval_{tag}.json", "w") as f:
         json.dump(out, f, indent=2)
     comparison.to_csv(RUNS_DIR / f"comparison_{tag}.csv", index=False)

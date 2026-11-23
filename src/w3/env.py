@@ -323,7 +323,7 @@ def make_env(shaping_scale: float = 0.0, gamma: float = 0.99, force_noise_std: f
 
 
 # --------------------------------------------------------------------------- #
-# Environment validation (run: python src/env.py)
+# Environment validation (run: python src/w3/env.py)
 # --------------------------------------------------------------------------- #
 def check_parity_with_gymnasium(n_episodes: int = 20, seed: int = 0) -> float:
     """Compare our transitions with Gymnasium CartPole-v1 step by step.
@@ -406,8 +406,13 @@ def random_policy_diagnostics(n_episodes: int = 100, shaping_scale: float = 1.0,
 
 def main() -> None:
     """Validate the environment and save the diagnostics for the report."""
+    import sys
+    from pathlib import Path
+
     from gymnasium.utils.env_checker import check_env
-    from common import RUNS_DIR, save_json
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # src/ (run as a script)
+    from w3.common import RUNS_DIR, save_json
 
     print("=" * 64)
     print("ENVIRONMENT VALIDATION - CartPoleControlEnv")

@@ -283,7 +283,7 @@ def w2_windows(meta: Dict, partition: str) -> tuple:
     Returns:
         tuple: ``(X, lengths, episode, t)`` with ``X`` of shape (n, window, F).
     """
-    from sequences import compute_features, window_episodes
+    from w2.sequences import compute_features, window_episodes  # Workshop 2 windows
 
     df = load_raw()
     part = subset(df, get_or_create_splits(df)[partition])
@@ -508,7 +508,7 @@ def setup_matplotlib() -> None:
 
 
 def save_fig(fig, name: str) -> None:
-    """Save a figure as PNG in ``report/workshop4/figures`` and close it."""
+    """Save a figure as PNG in ``runs/workshop4/figures`` and close it."""
     import matplotlib.pyplot as plt
 
     FIG_DIR.mkdir(parents=True, exist_ok=True)

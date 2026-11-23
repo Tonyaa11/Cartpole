@@ -44,8 +44,11 @@ def _tex_for_overleaf(src: Path, workshop: int) -> str:
     """Return tex source with paths reverted to Overleaf-relative form."""
     text = src.read_text(encoding="utf-8")
 
-    # Remove graphicspath line (Overleaf doesn't need it; figures/ is the cwd)
-    text = re.sub(r"\\graphicspath\{[^\}]+\}\n?", "", text)
+    # Point \graphicspath at figures/ only. The local line has nested braces,
+    # \graphicspath{{../runs/workshopN/figures/}{figures/}}, so the pattern must
+    # consume every {...} group (a plain [^}]+ stops at the first brace and leaves
+    # a dangling "{figures/}}" that breaks the document).
+    text = re.sub(r"\\graphicspath\{(?:\{[^{}]*\})+\}", lambda m: r"\graphicspath{{figures/}}", text)
 
     # Revert figure includes: #3.png -> figures/#3.png  (inside figph / figw)
     # \IfFileExists{X.png} -> \IfFileExists{figures/X.png}

@@ -565,17 +565,18 @@ without labels, but it also flagged harmless novelty. When labels exist, the sup
 preferred.
 
 \section*{Reproducibility}
-Code: \texttt{src/autoencoder.py} (models, losses, training loop), \texttt{src/train\_ae.py}
-(experiment plan and logging), \texttt{src/evaluate\_ae.py} (reconstruction, anomaly
-detection, denoising, generation), \texttt{src/analyze\_latent.py} (latent analysis) and
-\texttt{src/make\_report\_w4.py} (tables and numbers of this report). The frozen
-Workshop~2 model is loaded by \texttt{src/w2\_encoder.py} with the Workshop~2 code
-(\texttt{src/model.py}, \texttt{src/sequences.py}). The Workshop~3 monitoring is run by
-\texttt{src/monitor\_w3.py} with the Workshop~3 code in \texttt{workshop3/src} and the agent
-\texttt{checkpoints/agent\_best.pt}. Checkpoints are in
-\texttt{checkpoints/} (\texttt{ae\_best.pt}, \texttt{vae\_best.pt}, the normal-rows
-models, the supervised control and \texttt{w2\_lstm\_best.pt}) and logs in
-\texttt{runs/workshop4/}. Seed 42; split \texttt{data/splits.json}.
+Code in \path{src/w4/}: \path{autoencoder.py} (models, losses, training loop),
+\path{train_ae.py} (experiment plan and logging), \path{evaluate_ae.py}
+(reconstruction, anomaly detection, denoising, generation), \path{analyze_latent.py}
+(latent analysis) and \path{make_report_w4.py} (tables and numbers of this report).
+The frozen Workshop~2 model is loaded by \path{src/w4/w2_encoder.py} with the
+Workshop~2 code (\path{src/w2/model.py}, \path{src/w2/sequences.py}). The
+Workshop~3 monitoring is run by \path{src/w4/monitor_w3.py} with the Workshop~3 code
+in \path{src/w3/} and the agent \path{checkpoints/workshop3/agent_best.pt}.
+Checkpoints are in \path{checkpoints/workshop4/} (\path{ae_best.pt},
+\path{vae_best.pt}, the normal-rows models, the supervised control and
+\path{w2_lstm_best.pt}) and logs in \path{runs/workshop4/}. Seed 42; split
+\path{data/splits.json}; scikit-learn 1.6.1.
 
 \begin{thebibliography}{99}
 \bibitem{barto1983} A.~G. Barto, R.~S. Sutton, and C.~W. Anderson, ``Neuronlike adaptive elements that can solve difficult learning control problems,'' \emph{IEEE Trans. Syst., Man, Cybern.}, vol.~13, no.~5, pp.~834--846, 1983.
