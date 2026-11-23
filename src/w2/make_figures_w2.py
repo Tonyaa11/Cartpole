@@ -43,6 +43,7 @@ from sklearn.metrics import (
 )
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w1.dataset import ROOT_DIR, load_raw, load_splits
@@ -258,6 +259,8 @@ def fig_roc_pr(y_true: np.ndarray, deep_scores: np.ndarray) -> None:
     X_te, y_te = data["test"]
     assert (np.asarray(y_true) == np.asarray(y_te)).all(), "test rows differ!"
 
+    from w1.baselines import best_f1_threshold
+
     for name, model in get_models().items():
         model = fit_model(name, model, X_tr, y_tr)
         scores = model.predict_proba(X_te)[:, 1]
@@ -290,13 +293,14 @@ def fig_comparison(comparison_csv: Path) -> None:
     """Bar chart comparing the W1 baselines with the W2 deep model.
 
     Args:
-        comparison_csv (Path): CSV written by ``src/w2/evaluate_lstm.py``.
+        comparison_csv (Path): CSV written by ``src/evaluate.py``.
 
     Returns:
         None
     """
     df = pd.read_csv(comparison_csv)
     metrics = ["precision", "recall", "f1", "roc_auc", "pr_auc"]
+    labels = [f"{r.model}\n({r.workshop})" for r in df.itertuples()]
 
     fig, ax = plt.subplots(figsize=(7.6, 3.2))
     x = np.arange(len(metrics))

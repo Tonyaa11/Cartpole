@@ -35,6 +35,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w3.env import THETA_LIMIT, X_LIMIT

@@ -41,7 +41,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w3.common import CONFIG_FILE, RUNS_DIR, TRAIN_SEEDS, load_json
 from w3.env import CartPoleControlEnv
-from w3.train import SOLVED_THRESHOLD
+from w3.train import HALF_THRESHOLD, SOLVED_THRESHOLD
 
 FIG_DIR = RUNS_DIR / "figures"
 GEN_DIR = RUNS_DIR / "generated"

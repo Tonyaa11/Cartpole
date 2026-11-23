@@ -5,8 +5,8 @@ Machine Learning - Workshop 4
 
 The Workshop 2 network (``model.FailurePredictor``: 2-layer LSTM with 64
 hidden units over past-only windows of 16 raw steps, followed by an MLP head)
-is loaded from the Workshop 2 checkpoint ``checkpoints/workshop2/model_best.pt``
-and is NOT retrained.
+is loaded from ``checkpoints/workshop4/w2_lstm_best.pt`` (a copy of the Workshop 2
+``checkpoints/workshop2/model_best.pt``) and is NOT retrained.
 
 Two outputs are extracted for every row of every partition:
     * ``z``     : final hidden state of the last LSTM layer (64-D). This is the
@@ -29,6 +29,7 @@ import torch
 from torch.nn.utils.rnn import pack_padded_sequence
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w2.model import FailurePredictor, build_model

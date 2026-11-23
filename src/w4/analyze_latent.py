@@ -10,7 +10,7 @@ Representations compared (all computed on the TEST episodes)
     * AE            : bottleneck code of ``checkpoints/workshop4/ae_best.pt``
     * VAE           : posterior mean mu of ``checkpoints/workshop4/vae_best.pt`` (not a sample)
     * W2 LSTM       : frozen final hidden state (64-D) of the Workshop 2 deep
-                      LSTM (``checkpoints/workshop2/model_best.pt``, see ``w2_encoder.py``)
+                      LSTM (``checkpoints/workshop4/w2_lstm_best.pt``, see ``w2_encoder.py``)
     * MLP control   : bottleneck of a supervised MLP with the SAME trunk and
                       input as the AE (isolates the effect of the labels from the
                       temporal context the LSTM reads); table only

@@ -35,6 +35,7 @@ import numpy as np
 import torch
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w3.agent import DQNAgent, DQNConfig

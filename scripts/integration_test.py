@@ -420,7 +420,7 @@ def test_w4() -> bool:
                      f"{X.shape}")
 
         # Label-free monitoring of the Workshop 3 controllers (monitor_w3.py)
-        importlib.import_module("w4.monitor_w3")
+        import w4.monitor_w3  # noqa: F401
         ok &= _check("monitor_w3 imports (W3 policies + W1/W2 bridges)", True)
 
     except Exception:

@@ -50,6 +50,7 @@ from sklearn.metrics import (
 )
 
 import sys
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from w1.dataset import (
@@ -74,8 +75,7 @@ CKPT_RUNS_DIR = CKPT_DIR
 FIG_DIR = RUNS_DIR / "figures"
 GEN_DIR = RUNS_DIR / "generated"
 W1_RESULTS_CSV = ROOT_DIR / "runs" / "workshop1" / "baseline_results_base.csv"
-# Workshop 2 model (2-layer LSTM, window 16), read from its own folder (no copy here)
-W2_CKPT = ROOT_DIR / "checkpoints" / "workshop2" / "model_best.pt"
+W2_CKPT = CKPT_DIR / "w2_lstm_best.pt"  # Workshop 2 model (2-layer LSTM, window 16)
 
 PARTITIONS = ("train", "val", "test")
 
