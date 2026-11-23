@@ -130,7 +130,8 @@ Each workshop has a dedicated Colab notebook that clones the repository and runs
 │   ├── workshop3/agent_best.pt        # best W3 DQN agent
 │   ├── workshop3/sweep/               # best checkpoint of every sweep run (<config>_s<seed>.pt)
 │   └── workshop4/                     # ae_best.pt, vae_best.pt, ae_normal_best.pt,
-│                                      # vae_normal_best.pt, mlp_control.pt, w2_lstm_best.pt
+│                                      # vae_normal_best.pt, mlp_control.pt and every run
+│                                      # (W4 reads the W2 model from workshop2/model_best.pt)
 ├── runs/
 │   ├── workshop1/                     # baseline_results_*.csv/.json, figures/
 │   ├── workshop2/                     # train_log_*.csv, eval_*.json, comparison_*.csv, tb/, figures/
